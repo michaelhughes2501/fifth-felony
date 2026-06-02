@@ -1,0 +1,10 @@
+node_modules
+.next
+.env
+.env.local
+.DS_Store
+*.log
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
