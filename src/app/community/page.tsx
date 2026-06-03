@@ -3,8 +3,109 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 
+interface Reply {
+  id: string;
+  body: string;
+  created_at: string;
+  author: { id: string; full_name: string | null } | null;
+}
+
+interface Post {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  profiles?: { full_name: string | null } | null;
+}
+
+function ReplySection({ postId, signedIn }: { postId: string; signedIn: boolean }) {
+  const [replies, setReplies] = useState<Reply[]>([]);
+  const [open, setOpen] = useState(false);
+  const [replyBody, setReplyBody] = useState("");
+  const [replyError, setReplyError] = useState("");
+  const [loadingReplies, setLoadingReplies] = useState(false);
+
+  async function loadReplies() {
+    setLoadingReplies(true);
+    const res = await fetch(`/api/community/${postId}/replies`);
+    const json = await res.json();
+    setReplies(Array.isArray(json) ? json : []);
+    setLoadingReplies(false);
+  }
+
+  function toggleReplies() {
+    if (!open) loadReplies();
+    setOpen((v) => !v);
+  }
+
+  async function submitReply() {
+    setReplyError("");
+    const res = await fetch(`/api/community/${postId}/replies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: replyBody }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setReplyError(json.error || "Something went wrong");
+      return;
+    }
+    setReplyBody("");
+    loadReplies();
+  }
+
+  return (
+    <div className="mt-4 border-t border-forest/10 pt-4">
+      <button
+        className="font-body text-xs font-semibold text-clay hover:text-forest transition"
+        onClick={toggleReplies}
+      >
+        {open ? "Hide replies" : "Show replies"}
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-3">
+          {loadingReplies ? (
+            <div className="h-10 animate-pulse rounded-lg bg-cream-deep/40" />
+          ) : replies.length === 0 ? (
+            <p className="font-body text-xs text-ink/50">No replies yet.</p>
+          ) : (
+            replies.map((r) => (
+              <div key={r.id} className="rounded-lg border border-forest/10 bg-white/50 px-4 py-3">
+                <p className="font-body text-sm leading-relaxed text-ink/75 whitespace-pre-wrap">{r.body}</p>
+                <p className="mt-1 font-body text-xs text-ink/45">
+                  {r.author?.full_name || "A member"} · {new Date(r.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            ))
+          )}
+
+          {signedIn && (
+            <div className="mt-2">
+              <textarea
+                className="field min-h-20 w-full"
+                placeholder="Write a reply…"
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+              />
+              {replyError && <p className="mt-1 font-body text-xs text-clay">{replyError}</p>}
+              <button
+                className="btn-primary mt-2"
+                onClick={submitReply}
+                disabled={!replyBody.trim()}
+              >
+                Reply
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CommunityPage() {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [signedIn, setSignedIn] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -65,6 +166,7 @@ export default function CommunityPage() {
                 <p className="mt-4 font-body text-xs text-ink/45">
                   {p.profiles?.full_name || "A member"} · {new Date(p.created_at).toLocaleDateString()}
                 </p>
+                <ReplySection postId={p.id} signedIn={signedIn} />
               </article>
             ))
           )}

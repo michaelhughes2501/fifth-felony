@@ -139,3 +139,22 @@ alter table legal_resources    enable row level security;
 create policy "jobs readable"    on jobs            for select using (true);
 create policy "housing readable" on housing         for select using (true);
 create policy "legal readable"   on legal_resources for select using (true);
+
+-- ============================================================
+-- Additions: notifications, knowledge_base alias, display_name
+-- ============================================================
+
+-- Notifications
+create table if not exists notifications (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references profiles(id) on delete cascade,
+  type text not null,
+  message text not null,
+  is_read boolean default false,
+  created_at timestamptz default now()
+);
+alter table notifications enable row level security;
+create policy "Owner notifications" on notifications for all using (auth.uid() = user_id);
+
+-- display_name alias on profiles (used by community replies API)
+alter table profiles add column if not exists display_name text generated always as (coalesce(full_name, 'Anonymous')) stored;
