@@ -32,17 +32,23 @@ export function ResourceManager({
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
-  async function load() {
+  async function load(signal?: AbortSignal) {
     setLoading(true);
     try {
-      const res = await fetch(endpoint);
+      const res = await fetch(endpoint, { signal });
       const json = await res.json();
       setRows(json[dataKey] ?? []);
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, []); // eslint-disable-line
 
   function startCreate() {
     const blank: Record<string, any> = {};

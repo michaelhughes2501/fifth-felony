@@ -24,20 +24,24 @@ export function ApplicationTracker() {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  async function load() {
+  async function load(signal?: AbortSignal) {
     setLoading(true);
     try {
-      const res = await fetch("/api/applications");
+      const res = await fetch("/api/applications", { signal });
       const json = await res.json();
       setApps(json.applications ?? []);
-    } catch {
-      setApps([]);
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") setApps([]);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, []);
 
   async function setStatus(id: string, status: JobApplication["status"]) {
     // optimistic update
