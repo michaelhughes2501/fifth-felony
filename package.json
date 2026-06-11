@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3002",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3002",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
@@ -14,10 +14,13 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
     "@tailwindcss/postcss": "^4.3.0",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
     "next": "^16.2.7",
     "openai": "^6.40.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
