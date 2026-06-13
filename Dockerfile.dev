@@ -1,0 +1,12 @@
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json package-lock.json* pnpm-lock.yaml* ./
+RUN npm ci --frozen-lockfile || npm install
+
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 && chown -R nextjs:nodejs /app
+
+COPY --chown=nextjs:nodejs . .
+USER nextjs
+
+EXPOSE 3000
+CMD ["npm", "run", "dev", "--", "-p", "3000"]
