@@ -1,8 +1,9 @@
 import { ApplicationModel } from "@/models/application.model";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase-server";
 import type { JobApplication, Result } from "@/types";
 
 async function requireUser() {
+  if (!isSupabaseConfigured()) return null;
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   return user;

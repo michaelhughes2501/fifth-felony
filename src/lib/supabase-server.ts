@@ -7,6 +7,22 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "local-plac
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || "local-placeholder-service-role-key";
 
+// A value is a placeholder if it's empty or carries one of the stand-in
+// markers shipped in .env.local / the code defaults. Hitting a placeholder
+// host (e.g. https://placeholder.supabase.co) hangs ~7s on connect and then
+// 500s, so callers should short-circuit instead of making the request.
+const isPlaceholder = (v: string) =>
+  !v || /placeholder|REPLACE|your-project/i.test(v);
+
+// True only when real Supabase credentials are present. When false, the app
+// runs locally with empty data instead of erroring on every data route.
+export function isSupabaseConfigured(): boolean {
+  return !isPlaceholder(supabaseUrl) && !isPlaceholder(supabaseAnonKey);
+}
+
+export const SUPABASE_NOT_CONFIGURED =
+  "Supabase is not configured. Add real NEXT_PUBLIC_SUPABASE_URL and keys to .env.local.";
+
 // Server-side Supabase client (respects RLS via the user's session cookie).
 export function createClient() {
   return createServerClient(

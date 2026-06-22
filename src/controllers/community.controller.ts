@@ -1,6 +1,13 @@
 import { CommunityModel } from "@/models/community.model";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase-server";
 import type { CommunityPost, Result } from "@/types";
+
+async function requireUser() {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
 
 export const CommunityController = {
   async list(): Promise<Result<CommunityPost[]>> {
@@ -12,8 +19,7 @@ export const CommunityController = {
   },
 
   async create(title: string, body: string): Promise<Result<CommunityPost>> {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await requireUser();
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
     if (!title?.trim() || !body?.trim())
       return { ok: false, error: "Title and body are required", status: 400 };
@@ -26,8 +32,7 @@ export const CommunityController = {
   },
 
   async update(id: string, patch: { title?: string; body?: string }): Promise<Result<CommunityPost>> {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await requireUser();
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
     try {
       // RLS guarantees only the author can update; surface 403 if it changed nothing.
@@ -38,8 +43,7 @@ export const CommunityController = {
   },
 
   async remove(id: string): Promise<Result<{ id: string }>> {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await requireUser();
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
     try {
       await CommunityModel.remove(id);

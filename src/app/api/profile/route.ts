@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured, SUPABASE_NOT_CONFIGURED } from "@/lib/supabase-server";
 
 // GET /api/profile?id=<uuid>  — fetch a profile by user id
 export async function GET(req: NextRequest) {
   const userId = new URL(req.url).searchParams.get("id");
   if (!userId) return NextResponse.json({ error: "id required" }, { status: 400 });
+  if (!isSupabaseConfigured()) return NextResponse.json({ profile: null });
 
   try {
     const supabase = createClient();
@@ -23,6 +24,8 @@ export async function GET(req: NextRequest) {
 
 // PUT /api/profile  — update own profile (must be signed in)
 export async function PUT(req: NextRequest) {
+  if (!isSupabaseConfigured())
+    return NextResponse.json({ error: SUPABASE_NOT_CONFIGURED }, { status: 401 });
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();

@@ -1,16 +1,16 @@
-FROM node:20-alpine as base
+FROM node:24-alpine as base
 WORKDIR /app
 RUN npm install -g npm@11.17.0
 COPY package.json package-lock.json* pnpm-lock.yaml* ./
 RUN npm ci --frozen-lockfile || npm install
 
-FROM node:20-alpine as builder
+FROM node:24-alpine as builder
 WORKDIR /app
 COPY --from=base /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next

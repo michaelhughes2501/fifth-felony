@@ -1,0 +1,36 @@
+# Daily Code Health Check — 2026-06-17
+
+App: `reentry-support-platform` (Fifth_felony) · Next.js 16.2.9 · React 19 · TypeScript 6.0.3 · Supabase SSR · Tailwind 4 · zod 4
+Target: `C:\FeloniousApps\1main\Fifth_felony`
+
+## Summary
+The **source code is healthy**: it type-checks with **0 errors** and the **production build succeeds** (all 23 routes compile). One safe in-range dependency upgrade was applied (`openai` 6.42.0 → 6.44.0) and verified against both type-check and build. No dead dependencies. The repo's `node_modules` on the Windows mount is **broken/incomplete** (the `next` package is missing its files) and must be repaired with a native `npm install` on Windows — this is an environment/install problem, **not a code defect**. Verification this run was done in a clean-room install inside the Linux sandbox because the mount can't be reinstalled from here (slow I/O + blocked rename/unlink) and Desktop Commander was unavailable.
+
+## 1. Git status (start of run)
+Pre-existing, untouched by this run: modified `.github/dependabot.yml`, `.github/workflows/ci.yml`, `SECURITY.md`, `daily-code-check-2026-06-16.md`, `tsconfig.tsbuildinfo`; untracked `GATEWAY.md`. The only file this run changed is `package-lock.json` (the openai pin — see §3).
+
+## 2. Type check — PASS (0 errors)
+- Against the **broken mount `node_modules`**, `tsc --noEmit` reports ~60 errors, but every one is `Cannot find module 'next/*'` or `Cannot find name 'process'` — i.e. missing type packages, caused by the incomplete install, not by the code.
+- Against a **clean install** of the exact `package.json` / `package-lock.json` (TypeScript 6.0.3, Next 16.2.9): **0 errors**. The application source under `src/`, `middleware.ts`, and `gateway/` is fully type-clean. No source fixes were needed.
+
+## 3. Dependencies — one safe upgrade applied; nothing dead
+- **`npm outdated`:** only `openai` was behind — Current `6.42.0`, Wanted/Latest `6.44.0`. This is an in-range minor (the `^6.42.0` caret already permits it).
+- **Applied:** bumped the locked `openai` version to **6.44.0** in `package-lock.json` (matches what `npm update openai` produces; `package.json`'s `^6.42.0` range is unchanged and still consistent). Re-verified afterward: **type-check 0 errors, build succeeds**.
+- **Dead-dependency scan:** none to remove. `@tailwindcss/postcss` (0 source imports) is used by `postcss.config.mjs`; `react-dom` (0 direct imports) is the required React runtime; `autoprefixer` / `postcss` / `typescript` / `@types/*` are build-time. All runtime deps are imported in source (`next` 32 refs, `@supabase/ssr` 5, `openai` 2, `zod` 2, `@supabase/supabase-js` 1, `react` 12).
+- **`npm audit`:** 2 *moderate* advisories, both from `next` depending on a vulnerable `postcss` range. `16.2.9` is already the latest stable Next (no in-range fix); the only "fix" is `npm audit fix --force` to a canary, which is a breaking change. **Left for the user to decide** — not forced.
+
+## 4. Build — PASS (verified in clean-room)
+- `next build` (Turbopack, Next 16.2.9) completed successfully: **0 errors**, 23 routes built, static pages generated (23/23). Both the static pages and the API/dynamic routes (`/api/*`, `/dashboard`, `/gateway/[[...slug]]`, middleware proxy) compiled.
+- This is a stronger result than the 2026-06-16 run, where the build couldn't even start (SWC SIGBUS). The build was run in a clean sandbox install of the project (source + `gateway/` + `public/` + `.env.local` placeholders); the mount itself can't build until its `node_modules` is restored.
+
+## 5. Mount `node_modules` is broken — needs a native reinstall
+- `node_modules/next/` on the mount contains no package files (no `dist/`, `package.json`, `types.d.ts`, `server.d.ts`) — just an empty `node_modules/` subdir. `@next/env` and the **`@next/swc-win32-x64-msvc`** binary (needed for a Windows build) are absent.
+- A native `npm install` could not be run from the Cowork Linux sandbox: the Windows mount is slow and blocks the rename/unlink npm needs, so the attempt timed out mid-extraction. **Desktop Commander (which runs npm natively on Windows) was not available this run.**
+
+## Left for the user to do / decide
+1. **Run `npm install` natively on Windows** (PowerShell/CMD in the project folder, or via Desktop Commander) to rebuild `node_modules` — this restores the `next` package and pulls the correct **win32-x64 SWC** binary. After that, `npx tsc --noEmit` and `npm run build` (port 3002) will pass locally exactly as they did in clean-room verification this run.
+2. **Commit the `package-lock.json` openai bump** (6.42.0 → 6.44.0) — already applied to the file, verified safe.
+3. **`npm audit` (2 moderate, next→postcss):** no safe in-range fix; decide whether to wait for a patched Next 16.x or accept the advisory. Not forced.
+4. Pre-existing working-tree changes (`.github/dependabot.yml`, `.github/workflows/ci.yml`, `SECURITY.md`, untracked `GATEWAY.md`) are unrelated to this check and were left for your review.
+
+_Generated by the automated daily code health check._

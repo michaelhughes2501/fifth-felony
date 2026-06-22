@@ -30,13 +30,18 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refreshes the session and gates protected routes
+  // Refreshes the session and gates protected routes. When Supabase isn't
+  // configured (local placeholder env), skip the network call — there can be
+  // no signed-in user, so protected routes fall through to the /login redirect.
+  const configured = !/placeholder|REPLACE|your-project/i.test(supabaseUrl + supabaseAnonKey);
   let user = null;
-  try {
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
-  } catch {
-    user = null;
+  if (configured) {
+    try {
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    } catch {
+      user = null;
+    }
   }
   const protectedPaths = ["/dashboard", "/assistant", "/admin"];
   const isProtected = protectedPaths.some((p) => request.nextUrl.pathname.startsWith(p));

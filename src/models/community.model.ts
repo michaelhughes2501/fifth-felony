@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured, SUPABASE_NOT_CONFIGURED } from "@/lib/supabase-server";
 import type { CommunityPost } from "@/types";
 
 // Community writes go through the RLS-scoped client; the policies in
@@ -6,6 +6,7 @@ import type { CommunityPost } from "@/types";
 
 export const CommunityModel = {
   async list(): Promise<CommunityPost[]> {
+    if (!isSupabaseConfigured()) return [];
     const supabase = createClient();
     const { data, error } = await supabase
       .from("community_posts")
@@ -17,6 +18,7 @@ export const CommunityModel = {
   },
 
   async get(id: string): Promise<CommunityPost | null> {
+    if (!isSupabaseConfigured()) return null;
     const supabase = createClient();
     const { data, error } = await supabase
       .from("community_posts")
@@ -28,6 +30,7 @@ export const CommunityModel = {
   },
 
   async create(authorId: string, title: string, body: string): Promise<CommunityPost> {
+    if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
     const supabase = createClient();
     const { data, error } = await supabase
       .from("community_posts")
@@ -39,6 +42,7 @@ export const CommunityModel = {
   },
 
   async update(id: string, patch: { title?: string; body?: string }): Promise<CommunityPost> {
+    if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
     const supabase = createClient();
     const { data, error } = await supabase
       .from("community_posts")
@@ -51,6 +55,7 @@ export const CommunityModel = {
   },
 
   async remove(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
     const supabase = createClient();
     const { error } = await supabase.from("community_posts").delete().eq("id", id);
     if (error) throw new Error(error.message);

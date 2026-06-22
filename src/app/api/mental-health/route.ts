@@ -2,9 +2,10 @@
 // POST: create a check-in for the signed-in user
 // GET:  retrieve the current user's recent check-ins
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured, SUPABASE_NOT_CONFIGURED } from "@/lib/supabase-server";
 
 export async function GET() {
+  if (!isSupabaseConfigured()) return NextResponse.json({ checkins: [] });
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -25,6 +26,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isSupabaseConfigured())
+    return NextResponse.json({ error: SUPABASE_NOT_CONFIGURED }, { status: 401 });
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();

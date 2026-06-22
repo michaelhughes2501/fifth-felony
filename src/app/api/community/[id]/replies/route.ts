@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { isSupabaseConfigured, SUPABASE_NOT_CONFIGURED } from '@/lib/supabase-server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, { params }: Ctx) {
+  if (!isSupabaseConfigured()) return NextResponse.json([])
   const { id } = await params
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -22,6 +24,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
 }
 
 export async function POST(req: NextRequest, { params }: Ctx) {
+  if (!isSupabaseConfigured())
+    return NextResponse.json({ error: SUPABASE_NOT_CONFIGURED }, { status: 401 })
   const { id } = await params
   const cookieStore = await cookies()
   const supabase = createServerClient(

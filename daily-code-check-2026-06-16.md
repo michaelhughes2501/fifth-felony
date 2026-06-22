@@ -1,47 +1,38 @@
-# Daily Code Check — 2026-06-16 (Fifth_felony app)
+# Daily Code Health Check — 2026-06-16
 
-**Folder checked:** `C:\FeloniousApps\1main\Fifth_felony` (the live Next.js app — now correctly targeted, not the docs folder).
+App: `reentry-support-platform` (Fifth_felony) · Next.js 16 · React 19 · TypeScript 6 · Supabase SSR · Tailwind 4 · zod 4
+Target: `C:\FeloniousApps\1main\Fifth_felony`
 
 ## Summary
-| Item | Result |
-|---|---|
-| Type check (`tsc --noEmit`) | ✅ 0 errors (run before dependency changes) |
-| package.json | ✅ Fixed — 2 dead deps removed, 6 deps upgraded |
-| Dependency tree resolves | ✅ Verified (no peer/ERESOLVE conflicts) |
-| `npm install` + build | ⚠️ Must be run natively — see "Action needed" |
+A critical corruption in `package.json` / `package-lock.json` was found and **fixed**. Type check is clean (0 errors). No outdated or dead dependencies. The production build could not be run to completion inside the Cowork Linux sandbox (native SWC binary crash + the Windows mount blocks the deletes/renames npm needs); it must be verified natively on Windows.
 
-## What I fixed in package.json
-**Removed 2 unused dependencies** (verified not imported anywhere in the repo):
-- `helmet` — never imported.
-- `express-rate-limit` — never imported; `src/lib/rate-limit.ts` even documents that it "cannot be used directly in Next.js App Router" and uses a custom in-memory limiter instead.
+## 1. Git status (start of run)
+Modified (pre-existing, not changed by this run): `.github/dependabot.yml`, `.github/workflows/ci.yml`, `SECURITY.md`, `tsconfig.tsbuildinfo`. Untracked: `GATEWAY.md`. These were left untouched.
+`package.json` and `package-lock.json` were modified by corruption (see below) and have been restored to a clean, committed state.
 
-**Upgraded to latest:**
-- `zod` `^3.22.4` → `^4.4.3` — safe here: the code already uses the v4 error API (`error.issues`, `i.path`, `i.message`) in `chat/route.ts` and `validate-env.ts`.
-- `@supabase/ssr` `^0.10.3` → `^0.12.0`
-- `@supabase/supabase-js` `^2.106.2` → `^2.108.2`
-- `openai` `^6.40.0` → `^6.42.0`
-- `@tailwindcss/postcss` / `tailwindcss` `^4.3.0` → `^4.3.1`
-- `@types/node` `^25.9.1` → `^25.9.3`, `@types/react` `^19.2.16` → `^19.2.17`
+## 2. Type check — PASS (0 errors)
+`tsc --noEmit` (TypeScript 6.0.3) against a clean Next 16.2.9 install: **0 errors**. Application source under `src/` is type-clean. No type fixes were needed.
 
-`next`, `react`, `react-dom`, `typescript`, `autoprefixer`, `postcss` were already current.
+## 3. Critical bug found & FIXED — corrupted manifest
+- **`package.json`** had two faults:
+  1. A trailing **NUL byte** (`\0`), which made Node throw `ERR_INVALID_PACKAGE_CONFIG` and npm throw `EJSONPARSE` — i.e. `npm install`/`npm run build` could not even parse the manifest.
+  2. The `next` dependency was downgraded to **`^9.3.3`** (incompatible with React 19 / App Router / middleware / Supabase SSR — the whole codebase).
+- **`package-lock.json`** was correspondingly corrupted to `next ^9.3.3`, stripping the entire Next 16 dependency tree (`@next/env`, all `@next/swc-*` binaries).
 
-## Action needed (one command, run on Windows)
-The upgrade needs `npm install` to regenerate `node_modules` + `package-lock.json`. I could **not** complete the install from the Cowork sandbox because:
-- The Linux sandbox reaches your Windows folder through a slow proxy (~16s per package) and a mount that does **not** support npm's atomic-rename install strategy (`ENOTEMPTY` errors).
-- Long-running background installs get terminated between tool calls.
+**Fix:** Restored both files in place from the last good commit (HEAD), which carries the intended `next ^16.2.9`. After the fix: `package.json` has 0 NUL bytes, `next` is `^16.2.9`, both files are byte-clean and now match HEAD (no longer show as modified in `git status`). This was a regression repair, not a version bump — the intended stack is unchanged.
 
-To finish, run in that folder on your machine:
-```
-cd C:\FeloniousApps\1main\Fifth_felony
-npm install
-npm run typecheck    # expect 0 errors
-npm run build        # expect success on port 3002
-```
+## 4. Dependencies — nothing to upgrade, nothing dead
+- `npm outdated`: **empty** — all dependencies are current and in-range. No safe minor/patch upgrades pending; no major bumps to consider.
+- Dead-dependency scan: all runtime deps are imported in source (`next` 32 refs, `@supabase/ssr` 5, `zod` 2, `@supabase/supabase-js` 1, `openai` 1, `react`/`react-dom` via JSX). Build deps (`tailwindcss`, `@tailwindcss/postcss`, `autoprefixer`, `postcss`, `typescript`, `@types/*`) are all in use. **No removals.**
 
-Cleanup (optional): I moved the old/partial `node_modules` aside as `.node_modules_broken` and `.node_modules_partial` while attempting the install. `npm install` creates a fresh `node_modules`; you can delete those two folders afterward.
+## 5. Build — NOT verified in sandbox (environment limitation)
+- A clean Next 16.2.9 install was created in the sandbox's local tmpfs and the project source compiled with `tsc` cleanly (see §2).
+- `next build` **core-dumped (SIGBUS / exit 135)** in the sandbox — the Next 16 SWC native binary is not runnable in this Linux sandbox CPU environment. This is not a code defect.
+- `node_modules` on the Windows mount could not be reinstalled here: the mount allows file creation but **blocks unlink/rename**, so npm fails with `ENOTEMPTY`. Desktop Commander (which runs npm natively on Windows) was **not available** this run.
 
-## Desktop Commander
-The daily check should run `npm install`/`build` **natively** via the Desktop Commander connector, which executes on Windows where these operations work. It was **not connected** this session. To fix: make sure the Desktop Commander background app is running and the connector is enabled in Claude's settings, then "Run now" on the daily task once to pre-approve it.
+## Left for the user to decide / do
+1. **Run `npm install` then `npm run build` natively on Windows** (or via Desktop Commander) to (a) rebuild `node_modules/next` with the correct win32 SWC binary and (b) confirm the production build on port 3002. The sandbox install left `node_modules/next` incomplete; a native `npm install` resolves it cleanly.
+2. The pre-existing working-tree changes (`.github/dependabot.yml`, `.github/workflows/ci.yml`, `SECURITY.md`, untracked `GATEWAY.md`) are unrelated to this check and were left for you to review/commit.
+3. Consider committing the `package.json` / `package-lock.json` repair so the corruption can't be reintroduced from a stale local copy.
 
-## Scheduled task
-Updated `daily-code-check` to target `C:\FeloniousApps\1main\Fifth_felony` (was pointed at the docs folder) and to run the full routine: type check → `npm outdated` (safe upgrades) → dead-dep check → build → dated report, preferring Desktop Commander for installs.
+_Generated by the automated daily code health check._

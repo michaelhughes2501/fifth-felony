@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase-server";
 import { ApplicationController } from "@/controllers/application.controller";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { redirect } from "next/navigation";
@@ -8,6 +8,7 @@ import { ResidentDashboardController } from "@/controllers/resident-dashboard.co
 import { RollCallPanel } from "@/components/RollCallPanel";
 
 export default async function DashboardPage() {
+  if (!isSupabaseConfigured()) redirect("/login");
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

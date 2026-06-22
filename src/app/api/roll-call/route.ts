@@ -3,9 +3,10 @@
 // POST /api/roll-call  — create today check-in (delegates to ResidentDashboardController)
 import { NextRequest, NextResponse } from "next/server";
 import { ResidentDashboardController } from "@/controllers/resident-dashboard.controller";
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase-server";
 
 export async function GET() {
+  if (!isSupabaseConfigured()) return NextResponse.json({ today: null, history: [] });
   try {
     const supabase = createClient();
     const authResult = await supabase.auth.getUser();

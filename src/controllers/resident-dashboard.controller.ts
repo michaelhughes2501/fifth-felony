@@ -1,8 +1,9 @@
-import { createClient } from "@/lib/supabase-server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase-server";
 import { ResidentDashboardModel } from "@/models/resident-dashboard.model";
 import type { CheckInStatus, DailyCheckIn, DashboardSummary, Result } from "@/types";
 
 async function requireUser() {
+  if (!isSupabaseConfigured()) return null;
   const supabase = createClient();
   const {
     data: { user },
