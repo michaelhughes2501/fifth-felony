@@ -9,9 +9,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
+      # Guard: fail the build if `next` is ever downgraded below the current major.
+      # This protects against the documented `npm audit fix --force` regression
+      # that would otherwise install next@9.3.3. Bump the floor when intentionally
+      # upgrading the Next.js major version.
+      - name: Guard against next.js major downgrade
+        run: |
+          NEXT_MAJOR=$(node -p "require('./node_modules/next/package.json').version.split('.')[0]")
+          if [ "$NEXT_MAJOR" -lt 16 ]; then
+            echo "::error::next.js major version ($NEXT_MAJOR) is below floor (16). Refusing to build."
+            exit 1
+          fi
+          echo "next.js major version: $NEXT_MAJOR (ok)"
       - run: npm run lint
       - run: npm run build
     env:

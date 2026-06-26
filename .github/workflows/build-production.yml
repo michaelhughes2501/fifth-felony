@@ -26,7 +26,7 @@ jobs:
           python-version: "3.11"
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Install agent deps
         run: pip install pyyaml
       - name: Install project deps (so webpack inspector can require plugins)
@@ -97,7 +97,7 @@ jobs:
           python-version: "3.11"
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
       - name: Install agent deps
         run: pip install pyyaml
