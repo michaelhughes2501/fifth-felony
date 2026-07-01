@@ -1,7 +1,19 @@
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap");
-@config "../../tailwind.config.ts";
-
 @import "tailwindcss";
+
+@theme {
+  --color-ink: #202124;
+  --color-forest: #1a237e;
+  --color-forest-deep: #11185e;
+  --color-forest-light: #3949ab;
+  --color-cream: #fafafa;
+  --color-cream-deep: #f1f3f4;
+  --color-clay: #c62828;
+  --color-gold: #ff9800;
+  --color-sage: #4caf50;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "'Hanken Grotesk'", system-ui, sans-serif;
+}
 
 :root {
   --forest: #1a237e;
