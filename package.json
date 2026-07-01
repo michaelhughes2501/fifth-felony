@@ -9,25 +9,31 @@
     "start": "next start --port 3002",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --test",
+    "postinstall": "node scripts/patch-postcss.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.0",
-    "@supabase/supabase-js": "2.108.2",
-    "@tailwindcss/postcss": "4.3.1",
-    "next": "16.2.9",
-    "openai": "6.44.0",
+    "@supabase/supabase-js": "2.110.0",
+    "@tailwindcss/postcss": "4.3.2",
+    "next": "^16.2.9",
+    "openai": "6.45.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/node": "26.0.0",
+    "@types/node": "26.0.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "autoprefixer": "10.5.1",
-    "postcss": "8.5.15",
-    "tailwindcss": "4.3.1",
+    "autoprefixer": "10.5.2",
+    "postcss": "8.5.16",
+    "tailwindcss": "4.3.2",
     "typescript": "6.0.3"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.16"
+    }
   }
 }
