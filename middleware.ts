@@ -16,12 +16,17 @@ export async function middleware(request: NextRequest) {
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
 
-  // In dev/preview without Supabase credentials, skip auth/RBAC entirely so
-  // pages render instead of crashing every route with a 500. Protected routes
-  // will simply be unauthenticated — components handle the empty-user state.
+  // In dev/preview without real Supabase credentials, skip auth/RBAC entirely
+  // so pages render instead of crashing every route with a 500. Protected
+  // routes stay unauthenticated — components handle the empty-user state.
+  // Matches the placeholder-detection in src/lib/supabase-server.ts; a bare
+  // truthiness check isn't enough because the .env.local.example ships with
+  // stand-in values like `your-project.supabase.co`, and hitting that host
+  // hangs ~7s on connect before 500-ing.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const isPlaceholder = (v?: string) => !v || /placeholder|REPLACE|your-project/i.test(v)
+  if (isPlaceholder(supabaseUrl) || isPlaceholder(supabaseAnonKey)) {
     return response
   }
 
