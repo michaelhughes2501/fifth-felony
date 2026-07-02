@@ -7,7 +7,7 @@ const PROTECTED = ['/dashboard', '/admin', '/applications']
 export async function middleware(request: NextRequest) {
   // Add security headers
   let response = NextResponse.next({ request })
-  
+
   // Security headers
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
@@ -16,9 +16,18 @@ export async function middleware(request: NextRequest) {
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
 
+  // In dev/preview without Supabase credentials, skip auth/RBAC entirely so
+  // pages render instead of crashing every route with a 500. Protected routes
+  // will simply be unauthenticated — components handle the empty-user state.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return response
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
