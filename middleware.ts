@@ -1,6 +1,8 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { normalizeRole, roleAtLeast } from '@/lib/rbac'
+
+type CookieToSet = { name: string; value: string; options?: CookieOptions }
 
 const PROTECTED = ['/dashboard', '/admin', '/applications']
 
@@ -23,9 +25,9 @@ export async function middleware(request: NextRequest) {
   // truthiness check isn't enough because the .env.local.example ships with
   // stand-in values like `your-project.supabase.co`, and hitting that host
   // hangs ~7s on connect before 500-ing.
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const isPlaceholder = (v?: string) => !v || /placeholder|REPLACE|your-project/i.test(v)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+  const isPlaceholder = (v: string) => !v || /placeholder|REPLACE|your-project/i.test(v)
   if (isPlaceholder(supabaseUrl) || isPlaceholder(supabaseAnonKey)) {
     return response
   }
@@ -36,7 +38,7 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
