@@ -1,13 +1,15 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { normalizeRole, roleAtLeast } from '@/lib/rbac'
+
+type CookieToSet = { name: string; value: string; options?: CookieOptions }
 
 const PROTECTED = ['/dashboard', '/admin', '/applications']
 
 export async function middleware(request: NextRequest) {
   // Add security headers
   let response = NextResponse.next({ request })
-  
+
   // Security headers
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
@@ -16,13 +18,27 @@ export async function middleware(request: NextRequest) {
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
 
+  // In dev/preview without real Supabase credentials, skip auth/RBAC entirely
+  // so pages render instead of crashing every route with a 500. Protected
+  // routes stay unauthenticated — components handle the empty-user state.
+  // Matches the placeholder-detection in src/lib/supabase-server.ts; a bare
+  // truthiness check isn't enough because the .env.local.example ships with
+  // stand-in values like `your-project.supabase.co`, and hitting that host
+  // hangs ~7s on connect before 500-ing.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+  const isPlaceholder = (v: string) => !v || /placeholder|REPLACE|your-project/i.test(v)
+  if (isPlaceholder(supabaseUrl) || isPlaceholder(supabaseAnonKey)) {
+    return response
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
