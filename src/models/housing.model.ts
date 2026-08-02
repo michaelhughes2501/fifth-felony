@@ -6,12 +6,20 @@ import {
 } from "@/lib/supabase-server";
 import type { Housing } from "@/types";
 
+// Escape PostgREST special characters to prevent filter injection.
+function sanitizeFilter(value: string): string {
+  return value.replace(/[.,()\\%]/g, "");
+}
+
 export const HousingModel = {
   async list(q?: string): Promise<Housing[]> {
     if (!isSupabaseConfigured()) return [];
     const supabase = createClient();
     let query = supabase.from("housing").select("*").order("created_at", { ascending: false });
-    if (q) query = query.or(`name.ilike.%${q}%,location.ilike.%${q}%,type.ilike.%${q}%`);
+    if (q) {
+      const safe = sanitizeFilter(q);
+      query = query.or(`name.ilike.%${safe}%,location.ilike.%${safe}%,type.ilike.%${safe}%`);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []) as Housing[];

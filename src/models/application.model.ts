@@ -32,20 +32,21 @@ export const ApplicationModel = {
     if (error) throw new Error(error.message);
     return data as JobApplication;
   },
-  async updateStatus(id: string, status: JobApplication["status"]): Promise<JobApplication> {
+  async updateStatus(id: string, status: JobApplication["status"], userId: string): Promise<JobApplication> {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("job_applications")
       .update({ status })
       .eq("id", id)
+      .eq("user_id", userId)
       .select()
       .single();
     if (error) throw new Error(error.message);
     return data as JobApplication;
   },
-  async remove(id: string): Promise<void> {
+  async remove(id: string, userId: string): Promise<void> {
     const supabase = createClient();
-    const { error } = await supabase.from("job_applications").delete().eq("id", id);
+    const { error } = await supabase.from("job_applications").delete().eq("id", id).eq("user_id", userId);
     if (error) throw new Error(error.message);
   },
 };

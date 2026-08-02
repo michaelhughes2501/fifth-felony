@@ -31,13 +31,13 @@ export const ApplicationController = {
   async updateStatus(id: string, status: JobApplication["status"]): Promise<Result<JobApplication>> {
     const user = await requireUser();
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
-    try { return { ok: true, data: await ApplicationModel.updateStatus(id, status) }; }
+    try { return { ok: true, data: await ApplicationModel.updateStatus(id, status, user.id) }; }
     catch (e: any) { return { ok: false, error: e.message, status: 500 }; }
   },
   async remove(id: string): Promise<Result<{ id: string }>> {
     const user = await requireUser();
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
-    try { await ApplicationModel.remove(id); return { ok: true, data: { id } }; }
+    try { await ApplicationModel.remove(id, user.id); return { ok: true, data: { id } }; }
     catch (e: any) { return { ok: false, error: e.message, status: 500 }; }
   },
 };

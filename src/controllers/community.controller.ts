@@ -35,8 +35,7 @@ export const CommunityController = {
     const user = await requireUser();
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
     try {
-      // RLS guarantees only the author can update; surface 403 if it changed nothing.
-      return { ok: true, data: await CommunityModel.update(id, patch) };
+      return { ok: true, data: await CommunityModel.update(id, patch, user.id) };
     } catch (e: any) {
       return { ok: false, error: e.message, status: 500 };
     }
@@ -46,7 +45,7 @@ export const CommunityController = {
     const user = await requireUser();
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
     try {
-      await CommunityModel.remove(id);
+      await CommunityModel.remove(id, user.id);
       return { ok: true, data: { id } };
     } catch (e: any) {
       return { ok: false, error: e.message, status: 500 };

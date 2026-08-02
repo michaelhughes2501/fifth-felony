@@ -6,6 +6,11 @@ import {
 } from "@/lib/supabase-server";
 import type { Job } from "@/types";
 
+// Escape PostgREST special characters to prevent filter injection.
+function sanitizeFilter(value: string): string {
+  return value.replace(/[.,()\\%]/g, "");
+}
+
 // MODEL: owns all data access for the `jobs` table.
 // Read uses the RLS-scoped client; writes use the service client
 // (admin/provider seeding) since public users can't write jobs.
@@ -15,7 +20,10 @@ export const JobModel = {
     if (!isSupabaseConfigured()) return [];
     const supabase = createClient();
     let query = supabase.from("jobs").select("*").order("created_at", { ascending: false });
-    if (q) query = query.or(`title.ilike.%${q}%,company.ilike.%${q}%,location.ilike.%${q}%`);
+    if (q) {
+      const safe = sanitizeFilter(q);
+      query = query.or(`title.ilike.%${safe}%,company.ilike.%${safe}%,location.ilike.%${safe}%`);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []) as Job[];
