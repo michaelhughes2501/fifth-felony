@@ -8,6 +8,18 @@
  */
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 
+const MAX_ENTRIES = 10_000;
+
+// Periodically evict expired entries to prevent unbounded memory growth.
+function evictExpired() {
+  const now = Date.now();
+  for (const [key, entry] of requestCounts) {
+    if (now > entry.resetTime) {
+      requestCounts.delete(key);
+    }
+  }
+}
+
 export function checkRateLimit(
   key: string,
   maxRequests: number = 100,
@@ -17,6 +29,10 @@ export function checkRateLimit(
   const entry = requestCounts.get(key);
 
   if (!entry || now > entry.resetTime) {
+    // Evict expired entries if the map is getting large
+    if (requestCounts.size >= MAX_ENTRIES) {
+      evictExpired();
+    }
     requestCounts.set(key, { count: 1, resetTime: now + windowMs });
     return true;
   }

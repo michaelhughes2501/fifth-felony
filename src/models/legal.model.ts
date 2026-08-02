@@ -6,12 +6,20 @@ import {
 } from "@/lib/supabase-server";
 import type { LegalResource } from "@/types";
 
+// Escape PostgREST special characters to prevent filter injection.
+function sanitizeFilter(value: string): string {
+  return value.replace(/[.,()\\%]/g, "");
+}
+
 export const LegalModel = {
   async list(q?: string): Promise<LegalResource[]> {
     if (!isSupabaseConfigured()) return [];
     const supabase = createClient();
     let query = supabase.from("legal_resources").select("*").order("created_at", { ascending: false });
-    if (q) query = query.or(`name.ilike.%${q}%,category.ilike.%${q}%,location.ilike.%${q}%`);
+    if (q) {
+      const safe = sanitizeFilter(q);
+      query = query.or(`name.ilike.%${safe}%,category.ilike.%${safe}%,location.ilike.%${safe}%`);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []) as LegalResource[];

@@ -1,4 +1,5 @@
 import { JobModel } from "@/models/job.model";
+import { requireRole } from "@/lib/rbac";
 import type { Job, Result } from "@/types";
 
 // CONTROLLER: business logic + validation. Returns Result<T> so routes
@@ -24,6 +25,8 @@ export const JobController = {
   },
 
   async create(input: Partial<Job>): Promise<Result<Job>> {
+    const auth = await requireRole("admin");
+    if (!auth.ok) return auth;
     if (!input.title?.trim() || !input.company?.trim())
       return { ok: false, error: "Title and company are required", status: 400 };
     try {
@@ -34,6 +37,8 @@ export const JobController = {
   },
 
   async update(id: string, patch: Partial<Job>): Promise<Result<Job>> {
+    const auth = await requireRole("admin");
+    if (!auth.ok) return auth;
     try {
       return { ok: true, data: await JobModel.update(id, patch) };
     } catch (e: any) {
@@ -42,6 +47,8 @@ export const JobController = {
   },
 
   async remove(id: string): Promise<Result<{ id: string }>> {
+    const auth = await requireRole("admin");
+    if (!auth.ok) return auth;
     try {
       await JobModel.remove(id);
       return { ok: true, data: { id } };

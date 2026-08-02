@@ -41,23 +41,24 @@ export const CommunityModel = {
     return data as CommunityPost;
   },
 
-  async update(id: string, patch: { title?: string; body?: string }): Promise<CommunityPost> {
+  async update(id: string, patch: { title?: string; body?: string }, authorId: string): Promise<CommunityPost> {
     if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
     const supabase = createClient();
     const { data, error } = await supabase
       .from("community_posts")
       .update(patch)
       .eq("id", id)
+      .eq("author_id", authorId)
       .select()
       .single();
     if (error) throw new Error(error.message);
     return data as CommunityPost;
   },
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, authorId: string): Promise<void> {
     if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
     const supabase = createClient();
-    const { error } = await supabase.from("community_posts").delete().eq("id", id);
+    const { error } = await supabase.from("community_posts").delete().eq("id", id).eq("author_id", authorId);
     if (error) throw new Error(error.message);
   },
 };
