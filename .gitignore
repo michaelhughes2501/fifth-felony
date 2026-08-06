@@ -6,6 +6,8 @@ node_modules
 .DS_Store
 *.log
 
+# Daily-code-check skill output — transient, regenerated each run
+daily-code-check-*.md
 
-#Ignore vscode AI rules
-.github\instructions\codacy.instructions.md
+# VS Code / GitHub Copilot AI-rules file (Codacy directives, opt-in only)
+.github/instructions/codacy.instructions.md
