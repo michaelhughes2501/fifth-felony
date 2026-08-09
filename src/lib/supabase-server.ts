@@ -1,60 +1,50 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "local-placeholder-anon-key";
-const supabaseServiceRoleKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "local-placeholder-service-role-key";
 
-// A value is a placeholder if it's empty or carries one of the stand-in
-// markers shipped in .env.local / the code defaults. Hitting a placeholder
-// host (e.g. https://placeholder.supabase.co) hangs ~7s on connect and then
-// 500s, so callers should short-circuit instead of making the request.
-const isPlaceholder = (v: string) =>
-  !v || /placeholder|REPLACE|your-project/i.test(v);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-// True only when real Supabase credentials are present. When false, the app
-// runs locally with empty data instead of erroring on every data route.
+const isPlaceholder = (value: string): boolean =>
+  !value || /placeholder|REPLACE|your-project/i.test(value);
+
 export function isSupabaseConfigured(): boolean {
   return !isPlaceholder(supabaseUrl) && !isPlaceholder(supabaseAnonKey);
 }
 
 export const SUPABASE_NOT_CONFIGURED =
-  "Supabase is not configured. Add real NEXT_PUBLIC_SUPABASE_URL and keys to .env.local.";
+  "Supabase is not configured. Add real NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to the deployment environment.";
 
-// Server-side Supabase client (respects RLS via the user's session cookie).
 export function createClient() {
-  return createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        async getAll() {
-          const cookieStore = await cookies();
-          return cookieStore.getAll();
-        },
-        async setAll(cookiesToSet: CookieToSet[]) {
-          try {
-            const cookieStore = await cookies();
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // called from a Server Component — safe to ignore, middleware refreshes
-          }
-        },
+  return createServerClient(supabaseUrl || "http://127.0.0.1:54321", supabaseAnonKey || "local-placeholder-anon-key", {
+    cookies: {
+      async getAll() {
+        const cookieStore = await cookies();
+        return cookieStore.getAll();
       },
-    }
-  );
+      async setAll(cookiesToSet: CookieToSet[]) {
+        try {
+          const cookieStore = await cookies();
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        } catch {
+          // Server Components cannot always mutate cookies; middleware handles refresh.
+        }
+      },
+    },
+  });
 }
 
-// Service-role client for admin/seed tasks. NEVER expose to the browser.
-import { createClient as createSb } from "@supabase/supabase-js";
 export function createServiceClient() {
-  return createSb(
-    supabaseUrl,
-    supabaseServiceRoleKey,
-    { auth: { persistSession: false } }
-  );
+  if (!supabaseUrl || !supabaseServiceRoleKey || isPlaceholder(supabaseServiceRoleKey)) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for service-role operations.");
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
