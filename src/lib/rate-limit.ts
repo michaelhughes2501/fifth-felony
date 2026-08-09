@@ -1,57 +1,51 @@
-// NOTE: express-rate-limit is an Express middleware and cannot be used
-// directly in Next.js App Router routes. The in-memory checkRateLimit
-// function below is what the Next.js API routes actually use.
+// Lightweight in-memory limiter for a single Next.js instance.
+// For multi-instance production deployments, replace the store with a shared
+// Redis/Edge Config implementation.
 
-/**
- * Rate limit store for in-memory tracking (suitable for single-instance deployment)
- * For production with multiple instances, use Redis
- */
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
+type RateLimitEntry = { count: number; resetTime: number };
 
+const requestCounts = new Map<string, RateLimitEntry>();
 const MAX_ENTRIES = 10_000;
 
-// Periodically evict expired entries to prevent unbounded memory growth.
-function evictExpired() {
-  const now = Date.now();
+function evictExpired(now = Date.now()): void {
   for (const [key, entry] of requestCounts) {
-    if (now > entry.resetTime) {
-      requestCounts.delete(key);
-    }
+    if (now >= entry.resetTime) requestCounts.delete(key);
   }
 }
 
 export function checkRateLimit(
   key: string,
-  maxRequests: number = 100,
-  windowMs: number = 15 * 60 * 1000
+  maxRequests = 100,
+  windowMs = 15 * 60 * 1000
 ): boolean {
   const now = Date.now();
   const entry = requestCounts.get(key);
 
-  if (!entry || now > entry.resetTime) {
-    // Evict expired entries if the map is getting large
-    if (requestCounts.size >= MAX_ENTRIES) {
-      evictExpired();
-    }
+  if (!entry || now >= entry.resetTime) {
+    if (requestCounts.size >= MAX_ENTRIES) evictExpired(now);
+    if (requestCounts.size >= MAX_ENTRIES) return false;
     requestCounts.set(key, { count: 1, resetTime: now + windowMs });
     return true;
   }
 
-  if (entry.count < maxRequests) {
-    entry.count++;
-    return true;
-  }
-
-  return false;
+  if (entry.count >= maxRequests) return false;
+  entry.count += 1;
+  return true;
 }
 
-export function getRateLimitStatus(key: string): { remaining: number; resetTime: number } {
+export function getRateLimitStatus(
+  key: string,
+  maxRequests = 100,
+  windowMs = 15 * 60 * 1000
+): { remaining: number; resetTime: number } {
+  const now = Date.now();
   const entry = requestCounts.get(key);
-
-  if (!entry) {
-    return { remaining: 100, resetTime: Date.now() + 15 * 60 * 1000 };
+  if (!entry || now >= entry.resetTime) {
+    return { remaining: maxRequests, resetTime: now + windowMs };
   }
 
-  const remaining = Math.max(0, 100 - entry.count);
-  return { remaining, resetTime: entry.resetTime };
+  return {
+    remaining: Math.max(0, maxRequests - entry.count),
+    resetTime: entry.resetTime,
+  };
 }
