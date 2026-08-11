@@ -7,10 +7,26 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions }
 const PROTECTED = ['/dashboard', '/admin', '/applications']
 
 export async function middleware(request: NextRequest) {
-  // Add security headers
   let response = NextResponse.next({ request })
 
-  // Security headers
+  // Baseline security headers. CSP intentionally allows inline styles/scripts
+  // because Next.js and the existing UI use them; a nonce-based CSP can be
+  // introduced once the app is migrated to nonce-safe rendering everywhere.
+  response.headers.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https:",
+    "style-src 'self' 'unsafe-inline' https:",
+    "script-src 'self' 'unsafe-inline' https:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com",
+    "frame-src 'self'",
+    "worker-src 'self' blob:",
+    'upgrade-insecure-requests',
+  ].join('; '))
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-XSS-Protection', '1; mode=block')
@@ -18,34 +34,24 @@ export async function middleware(request: NextRequest) {
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
 
-  // In dev/preview without real Supabase credentials, skip auth/RBAC entirely
-  // so pages render instead of crashing every route with a 500. Protected
-  // routes stay unauthenticated — components handle the empty-user state.
-  // Matches the placeholder-detection in src/lib/supabase-server.ts; a bare
-  // truthiness check isn't enough because the .env.local.example ships with
-  // stand-in values like `your-project.supabase.co`, and hitting that host
-  // hangs ~7s on connect before 500-ing.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
   const isPlaceholder = (v: string) => !v || /placeholder|REPLACE|your-project/i.test(v)
+
   if (isPlaceholder(supabaseUrl) || isPlaceholder(supabaseAnonKey)) {
     return response
   }
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet: CookieToSet[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          response = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() { return request.cookies.getAll() },
+      setAll(cookiesToSet: CookieToSet[]) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        response = NextResponse.next({ request })
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
       },
-    }
-  )
+    },
+  })
 
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
@@ -54,7 +60,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // RBAC: /admin requires admin (or higher). Non-admins are sent to /dashboard.
   if (path.startsWith('/admin') && user) {
     let role: string | null = null
     try {
