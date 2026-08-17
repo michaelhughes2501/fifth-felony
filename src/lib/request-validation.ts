@@ -11,7 +11,12 @@ export const chatRequestSchema = z.object({
   stream: z.boolean().optional(),
 });
 
+export const createApplicationSchema = z.object({
+  job_id: z.string().uuid(),
+});
+
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
+export type CreateApplicationRequest = z.infer<typeof createApplicationSchema>;
 
 export function getClientIp(headers: Headers): string {
   const forwarded = headers.get("x-forwarded-for");
