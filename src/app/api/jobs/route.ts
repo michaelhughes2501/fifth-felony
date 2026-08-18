@@ -1,4 +1,5 @@
 import { JobController } from "@/controllers/job.controller";
+import { createJobSchema } from "@/lib/request-validation";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -10,13 +11,22 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let body: Record<string, unknown>;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const r = await JobController.create(body);
+
+  const parsed = createJobSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid job payload", issues: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const r = await JobController.create(parsed.data);
   return r.ok
     ? NextResponse.json({ job: r.data }, { status: 201 })
     : NextResponse.json({ error: r.error }, { status: r.status });
