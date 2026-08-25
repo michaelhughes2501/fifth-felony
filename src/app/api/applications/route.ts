@@ -1,4 +1,5 @@
 import { ApplicationController } from "@/controllers/application.controller";
+import { createApplicationSchema } from "@/lib/request-validation";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -9,14 +10,22 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  let body: Record<string, unknown>;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const job_id = body.job_id as string | undefined;
-  const r = await ApplicationController.create(job_id as string);
+
+  const parsed = createApplicationSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "job_id must be a valid job identifier" },
+      { status: 400 }
+    );
+  }
+
+  const r = await ApplicationController.create(parsed.data.job_id);
   return r.ok
     ? NextResponse.json({ application: r.data }, { status: 201 })
     : NextResponse.json({ error: r.error }, { status: r.status });
