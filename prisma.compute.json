@@ -1,0 +1,141 @@
+{
+  "region": "us-west-1",
+  "apps": {
+    "reentry-support-platform": {
+      "name": "reentry-support-platform",
+      "framework": "nextjs",
+      "httpPort": 3000,
+      "build": {
+        "command": "npm run build"
+      }
+    },
+    "New Horizon": {
+      "name": "NewHorizonWeb",
+      "framework": "nextjs",
+      "httpPort": 3000,
+      "build": {
+        "command": "next build"
+      }
+    },
+    "app-3": {
+      "name": "app-3",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-4": {
+      "name": "app-4",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-5": {
+      "name": "app-5",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-6": {
+      "name": "app-6",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-7": {
+      "name": "app-7",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-8": {
+      "name": "app-8",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-9": {
+      "name": "app-9",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-10": {
+      "name": "app-10",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-11": {
+      "name": "app-11",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-12": {
+      "name": "app-12",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-13": {
+      "name": "app-13",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    },
+    "app-14": {
+      "name": "app-14",
+      "framework": "hono",
+      "entry": "src/index.ts",
+      "httpPort": 3000,
+      "build": {
+        "command": null,
+        "outputDirectory": "."
+      }
+    }
+  }
+}
