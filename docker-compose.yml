@@ -1,21 +1,18 @@
-version: '3.9'
+version: '3.8'
+
 services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
-    container_name: fifth-felony-dev
+      dockerfile: Dockerfile
+    container_name: fifth-felony
     ports:
-      - "3000:3000"
+      - "3002:3002"
     environment:
-      - NODE_ENV=development
+      NODE_ENV: development
+      PORT: 3002
     volumes:
       - ./src:/app/src
-      - ./public:/app/public
-      - /app/node_modules
-    networks:
-      - fifth-felony
-
-networks:
-  fifth-felony:
-    driver: bridge
+      - ./app:/app/app
+    command: npm run dev
+    restart: unless-stopped

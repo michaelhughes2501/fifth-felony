@@ -1,28 +1,36 @@
-FROM node:24-alpine as base
+# Multi-stage build for Next.js
+FROM node:22-alpine AS deps
 WORKDIR /app
-RUN npm install -g npm@11.17.0
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
-RUN npm ci --frozen-lockfile || npm install
+COPY package*.json ./
+RUN npm ci
 
-FROM node:24-alpine as builder
+FROM node:22-alpine AS builder
 WORKDIR /app
-COPY --from=base /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:24-alpine
+FROM node:22-alpine AS runtime
 WORKDIR /app
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+RUN apk add --no-cache dumb-init
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/package.json .
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001 && chown -R nextjs:nodejs /app
+RUN chown -R nodejs:nodejs /app
+USER nodejs
 
-USER nextjs
+ENV NODE_ENV=production \
+    PORT=3002
+
+EXPOSE 3002
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:3000 || exit 1
+    CMD node -e "require('http').get('http://localhost:3002', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-EXPOSE 3000
-CMD ["npm", "start"]
+ENTRYPOINT ["/sbin/dumb-init", "--"]
+CMD ["node", "server.js"]
