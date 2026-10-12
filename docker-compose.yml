@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -11,8 +9,4 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3002
-    volumes:
-      - ./src:/app/src
-      - ./app:/app/app
-    command: npm run dev
     restart: unless-stopped
