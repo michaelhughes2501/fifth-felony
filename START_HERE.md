@@ -66,7 +66,7 @@ return errors until real keys are added — this is expected.
 | AI assistant | OpenAI gpt-4o-mini + text-embedding-3-small |
 | Styling | Tailwind CSS 4 |
 | Rate limiting | In-memory (see src/lib/rate-limit.ts) |
-| Security headers | middleware.ts (X-Frame-Options, CSP, HSTS, etc.) |
+| Security headers | src/proxy.ts (X-Frame-Options, CSP, HSTS, etc.) |
 
 ## API routes
 
@@ -85,6 +85,6 @@ return errors until real keys are added — this is expected.
 
 - `.env.local` is git-ignored. Never commit real keys.
 - The `SUPABASE_SERVICE_ROLE_KEY` is server-only — never exposed to the browser.
-- All protected routes (`/dashboard`, `/admin`, `/applications`) redirect to `/login` via middleware.
+- All protected routes (`/dashboard`, `/admin`, `/applications`) redirect to `/login` via the proxy (src/proxy.ts).
 - Row Level Security enforces data isolation at the database level.
 - Rotate any keys that were previously committed to version control.

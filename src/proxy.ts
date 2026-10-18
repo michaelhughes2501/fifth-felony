@@ -4,9 +4,9 @@ import { normalizeRole, roleAtLeast } from '@/lib/rbac'
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions }
 
-const PROTECTED = ['/dashboard', '/admin', '/applications']
+const PROTECTED = ['/dashboard', '/assistant', '/admin', '/applications']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   // Baseline security headers. CSP intentionally allows inline styles/scripts
