@@ -1,0 +1,39 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm audit --omit=dev
+      - run: npm run build
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      jobs:
+    build:
+        runs-on: ...
+        steps:
+            - uses: actions/checkout@v3
+
+            # ... some other preparation steps (dependencies, compilation as a separate step, etc) ...
+
+            - name: Setup Testcontainers Cloud Client
+              uses: atomicjar/testcontainers-cloud-setup-action@v1
+              with:
+                  token: ${{ secrets.TC_CLOUD_TOKEN }}
+
+            # ... existing steps executing your Testcontainers tests go here ...
+

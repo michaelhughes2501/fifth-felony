@@ -6,7 +6,15 @@ services:
     container_name: fifth-felony
     ports:
       - "3002:3002"
+    env_file:
+      - path: .env.local
+        required: false
     environment:
-      NODE_ENV: development
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL before starting the app}
+      NEXT_PUBLIC_NEON_AUTH_BASE_URL: ${NEXT_PUBLIC_NEON_AUTH_BASE_URL:?Set Neon Auth URL}
+      NEON_AUTH_BASE_URL: ${NEON_AUTH_BASE_URL:?Set Neon Auth URL}
+      NEON_AUTH_COOKIE_SECRET: ${NEON_AUTH_COOKIE_SECRET:?Generate Neon Auth cookie secret}
+      NODE_ENV: production
       PORT: 3002
+    command: ["sh", "-c", "node scripts/migrate-neon.mjs && node server.js"]
     restart: unless-stopped

@@ -3,21 +3,51 @@ import { z } from "zod";
 export const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant", "system"]),
   content: z.string().trim().min(1).max(10_000),
-});
+}).strict();
 
 export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).max(50),
   conversationId: z.string().uuid().optional(),
   stream: z.boolean().optional(),
-});
+}).strict();
 
-export const createApplicationSchema = z.object({
-  job_id: z.string().uuid(),
-});
+const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 
-const nullableTrimmedString = (max: number) =>
-  z.string().trim().max(max).nullable().optional();
+export const housingInputSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  type: z.enum(["transitional", "rental", "halfway", "shelter"]).nullable().optional(),
+  location: optionalText(200),
+  description: optionalText(10_000),
+  contact: optionalText(500),
+}).strict();
 
+export const legalInputSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  category: optionalText(100),
+  location: optionalText(200),
+  description: optionalText(10_000),
+  contact: optionalText(500),
+}).strict();
+
+export const housingPatchSchema = housingInputSchema.partial().strict().refine((value) => Object.keys(value).length > 0);
+export const legalPatchSchema = legalInputSchema.partial().strict().refine((value) => Object.keys(value).length > 0);
+
+export const communityCreateSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(10_000),
+}).strict();
+export const communityPatchSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  body: z.string().trim().min(1).max(10_000).optional(),
+}).strict().refine((value) => Object.keys(value).length > 0);
+export const communityReplySchema = z.object({ body: z.string().trim().min(1).max(5_000) }).strict();
+export const applicationStatusSchema = z.object({
+  status: z.enum(["interested", "applied", "interviewing", "hired", "closed"]),
+}).strict();
+
+export const createApplicationSchema = z.object({ job_id: z.string().uuid() }).strict();
+
+const nullableTrimmedString = (max: number) => z.string().trim().max(max).nullable().optional();
 export const createJobSchema = z.object({
   title: z.string().trim().min(1).max(200),
   company: z.string().trim().min(1).max(200),
@@ -25,10 +55,16 @@ export const createJobSchema = z.object({
   description: nullableTrimmedString(10_000),
   fair_chance: z.boolean().optional().default(false),
   apply_url: z.string().trim().url().max(2_000).nullable().optional(),
-});
+}).strict();
 
-export const updateJobSchema = createJobSchema.partial();
-
+export const updateJobSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  company: z.string().trim().min(1).max(200).optional(),
+  location: nullableTrimmedString(200),
+  description: nullableTrimmedString(10_000),
+  fair_chance: z.boolean().optional(),
+  apply_url: z.string().trim().url().max(2_000).nullable().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0);
 export const uuidParamSchema = z.string().uuid();
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;

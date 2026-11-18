@@ -45,12 +45,9 @@ export default function AdminPage() {
         setChecking(false);
         return;
       }
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-      setRole(profile?.role ?? null);
+      const response = await fetch(`/api/profile?id=${encodeURIComponent(user.id)}`);
+      const result = await response.json();
+      setRole(result.profile?.role ?? null);
       setChecking(false);
     }
     checkRole();

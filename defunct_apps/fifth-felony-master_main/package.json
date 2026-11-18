@@ -1,0 +1,38 @@
+{
+  "name": "reentry-support-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3002",
+    "build": "next build",
+    "start": "next start --port 3002",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.2",
+    "@tailwindcss/postcss": "^4.3.0",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "next": "^16.2.7",
+    "openai": "^6.40.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.7",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.4"
+  }
+}

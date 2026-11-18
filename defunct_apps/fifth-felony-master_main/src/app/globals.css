@@ -1,0 +1,75 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap");
+@config "../../tailwind.config.ts";
+
+@import "tailwindcss";
+
+:root {
+  --forest: #1a237e;
+  --forest-deep: #11185e;
+  --cream: #fafafa;
+  --clay: #c62828;
+  --gold: #ff9800;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background-color: var(--cream);
+  color: #202124;
+  font-family: "Hanken Grotesk", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+@layer components {
+  .container-edge { @apply mx-auto w-full max-w-6xl px-5 sm:px-8; }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-forest px-6 py-3
+           font-body font-semibold text-cream transition
+           hover:bg-forest-deep active:scale-[0.98];
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-forest/30
+           px-6 py-3 font-body font-semibold text-forest transition
+           hover:bg-forest hover:text-cream;
+  }
+  .card {
+    @apply rounded-lg border border-forest/10 bg-cream p-6 shadow-[0_2px_0_rgba(26,35,126,0.06)]
+           transition hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(20,42,35,0.12)];
+  }
+  .panel {
+    @apply rounded-lg border border-forest/10 bg-white/80 p-6 shadow-[0_10px_28px_rgba(26,35,126,0.08)];
+  }
+  .metric-card {
+    @apply rounded-lg border border-forest/10 bg-white/75 p-5 shadow-[0_6px_18px_rgba(26,35,126,0.06)];
+  }
+  .field {
+    @apply w-full rounded-lg border border-forest/20 bg-white/80 px-4 py-3
+           font-body text-ink outline-none transition
+           focus:border-forest focus:bg-white;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-lg bg-forest/10 px-3 py-1
+           text-xs font-semibold uppercase tracking-wide text-forest;
+  }
+  .eyebrow {
+    @apply font-body text-xs font-semibold uppercase tracking-wide text-ink/50;
+  }
+  .status-chip {
+    @apply inline-flex items-center rounded-lg bg-sage/20 px-3 py-1 font-body text-xs font-bold text-forest;
+  }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.rise-1 { animation-delay: 0.08s; }
+.rise-2 { animation-delay: 0.16s; }
+.rise-3 { animation-delay: 0.24s; }

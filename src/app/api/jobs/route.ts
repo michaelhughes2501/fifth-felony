@@ -1,5 +1,6 @@
 import { JobController } from "@/controllers/job.controller";
 import { createJobSchema } from "@/lib/request-validation";
+import { requireRole } from "@/lib/rbac";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -26,6 +27,8 @@ export async function POST(req: Request) {
     );
   }
 
+  const auth = await requireRole("moderator");
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const r = await JobController.create(parsed.data);
   return r.ok
     ? NextResponse.json({ job: r.data }, { status: 201 })

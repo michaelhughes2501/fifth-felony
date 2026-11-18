@@ -1,76 +1,8 @@
-// Mental health check-in API — wraps the resident-dashboard daily_check_ins table.
-// POST: create a check-in for the signed-in user
-// GET:  retrieve the current user's recent check-ins
-import { NextRequest, NextResponse } from "next/server";
-import { createClient, isSupabaseConfigured, SUPABASE_NOT_CONFIGURED } from "@/lib/supabase-server";
-
-export async function GET() {
-  if (!isSupabaseConfigured()) return NextResponse.json({ checkins: [] });
-  try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-
-    const { data, error } = await supabase
-      .from("daily_check_ins")
-      .select("id, status, mood_score, support_needed, notes, points_awarded, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    if (error) throw error;
-    return NextResponse.json({ checkins: data ?? [] });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}
-
-export async function POST(req: NextRequest) {
-  if (!isSupabaseConfigured())
-    return NextResponse.json({ error: SUPABASE_NOT_CONFIGURED }, { status: 401 });
-  try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-
-    const body: Record<string, unknown> = await req.json().catch(() => ({}));
-    const moodScore = Number(body.mood_score);
-    const status = (body.status as string) || "steady";
-    const notes  = typeof body.notes === "string" ? body.notes.trim().slice(0, 1200) : null;
-
-    if (!["steady", "needs_support", "urgent"].includes(status)) {
-      return NextResponse.json(
-        { error: "status must be steady, needs_support, or urgent" },
-        { status: 400 }
-      );
-    }
-    if (!Number.isInteger(moodScore) || moodScore < 1 || moodScore > 5) {
-      return NextResponse.json({ error: "mood_score must be 1–5" }, { status: 400 });
-    }
-
-    const { data, error } = await supabase
-      .from("daily_check_ins")
-      .insert({
-        user_id:        user.id,
-        status,
-        mood_score:     moodScore,
-        support_needed: Boolean(body.support_needed),
-        notes,
-        points_awarded: 10,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      const isDuplicate = error.message.includes("daily_check_ins_user_day_unique");
-      return NextResponse.json(
-        { error: isDuplicate ? "Already checked in today" : error.message },
-        { status: isDuplicate ? 409 : 500 }
-      );
-    }
-    return NextResponse.json({ checkin: data }, { status: 201 });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}
+import { NextRequest,NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase-server";
+import { query,queryOne,ensureProfile } from "@/lib/db";
+import { z } from "zod";
+type CheckIn={id:string;user_id:string;status:"steady"|"needs_support"|"urgent";mood_score:number;support_needed:boolean;notes:string|null;points_awarded:number;created_at:string};
+const schema=z.object({status:z.enum(["steady","needs_support","urgent"]).default("steady"),mood_score:z.coerce.number().int().min(1).max(5),support_needed:z.boolean().optional().default(false),notes:z.string().trim().max(1200).nullable().optional()});
+export async function GET(){const auth=createClient();const{data:{user}}=await auth.auth.getUser();if(!user)return NextResponse.json({error:"Sign in required"},{status:401});try{await ensureProfile(user.id,user.user_metadata?.full_name??null);}catch{return NextResponse.json({error:"Could not initialize profile"},{status:500});}try{return NextResponse.json({checkins:await query<CheckIn>("SELECT id,status,mood_score,support_needed,notes,points_awarded,created_at FROM daily_check_ins WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30",[user.id])});}catch{return NextResponse.json({error:"Could not load check-ins"},{status:500});}}
+export async function POST(req:NextRequest){const auth=createClient();const{data:{user}}=await auth.auth.getUser();if(!user)return NextResponse.json({error:"Sign in required"},{status:401});try{await ensureProfile(user.id,user.user_metadata?.full_name??null);}catch{return NextResponse.json({error:"Could not initialize profile"},{status:500});}let body:unknown;try{body=await req.json();}catch{return NextResponse.json({error:"Invalid JSON body"},{status:400});}const parsed=schema.safeParse(body);if(!parsed.success)return NextResponse.json({error:"Invalid check-in payload"},{status:400});try{const checkin=await queryOne<CheckIn>("INSERT INTO daily_check_ins(user_id,status,mood_score,support_needed,notes,points_awarded) VALUES($1,$2,$3,$4,$5,10) RETURNING *",[user.id,parsed.data.status,parsed.data.mood_score,parsed.data.support_needed,parsed.data.notes??null]);if(!checkin)return NextResponse.json({error:"Could not save check-in"},{status:500});await query("INSERT INTO positive_behavior_events(user_id,event_type,points,source_id,note) VALUES($1,'daily_check_in',10,$2,'Completed daily status confirmation') ON CONFLICT (source_id) DO NOTHING",[user.id,checkin.id]);return NextResponse.json({checkin},{status:201});}catch(error){const message=error instanceof Error?error.message:"";if(message.includes("daily_check_ins_user_day_unique"))return NextResponse.json({error:"Already checked in today"},{status:409});return NextResponse.json({error:"Could not save check-in"},{status:500});}}

@@ -1,6 +1,6 @@
 /**
- * Patches the postcss version bundled inside next's own node_modules to >=8.5.10
- * to resolve GHSA-qx2v-qp2m-jg93 (XSS via unescaped </style> in CSS stringify).
+ * Patches the postcss version bundled inside next's own node_modules to >=8.5.23
+ * to address PostCSS path traversal and source-map disclosure advisories.
  *
  * npm overrides cannot replace a direct dependency of a third-party package,
  * so we copy the hoisted patched postcss over the nested stale copy post-install.
@@ -29,7 +29,7 @@ const hoistedVersion = JSON.parse(
 ).version
 
 const [nMajor, nMinor, nPatch] = nestedVersion.split('.').map(Number)
-const isVulnerable = nMajor < 8 || (nMajor === 8 && nMinor < 5) || (nMajor === 8 && nMinor === 5 && nPatch < 10)
+const isVulnerable = nMajor < 8 || (nMajor === 8 && nMinor < 5) || (nMajor === 8 && nMinor === 5 && nPatch < 23)
 
 if (!isVulnerable) {
   console.log(`[patch-postcss] next/postcss@${nestedVersion} is already patched — skipping.`)

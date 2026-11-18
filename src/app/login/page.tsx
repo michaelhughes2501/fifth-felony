@@ -18,11 +18,8 @@ export default function LoginPage() {
     setMsg("");
     try {
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ email, password, options: { data: { name: fullName.trim() } } });
         if (error) throw error;
-        if (data.user) {
-          await supabase.from("profiles").insert({ id: data.user.id, full_name: fullName });
-        }
         setMsg("Check your email to confirm your account, then sign in.");
         setMode("signin");
       } else {

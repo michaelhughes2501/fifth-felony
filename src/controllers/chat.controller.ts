@@ -1,5 +1,5 @@
 import { embed, getOpenAI } from "@/lib/openai";
-import { createClient } from "@/lib/supabase-server";
+import { query } from "@/lib/db";
 import { chatComplete, streamChat, availableProviders, type GwMessage } from "@/lib/ai-gateway";
 import { logUsage } from "@/lib/usage";
 import { saveMessage } from "@/lib/conversations";
@@ -44,16 +44,9 @@ async function isFlagged(userMessage: string): Promise<boolean> {
 async function retrieveContext(userMessage: string): Promise<string> {
   try {
     const queryEmbedding = await embed(userMessage);
-    const supabase = createClient();
-    const { data: docs } = await supabase.rpc("match_knowledge", {
-      query_embedding: queryEmbedding,
-      match_count: 4,
-    });
-    if (docs?.length) {
-      return docs
-        .map((d: { title: string; content: string }) => `- ${d.title}: ${d.content}`)
-        .join("\n");
-    }
+    const vector = `[${queryEmbedding.join(",")}]`;
+    const docs = await query<{ title: string | null; content: string }>("SELECT title, content FROM match_knowledge($1::vector, $2)", [vector, 4]);
+    if (docs.length) return docs.map((doc) => `- ${doc.title ?? "Resource"}: ${doc.content}`).join("\n");
   } catch {
     // No knowledge base yet / embedding failure — proceed without context.
   }

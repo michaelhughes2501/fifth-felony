@@ -1,58 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient, isSupabaseConfigured, SUPABASE_NOT_CONFIGURED } from "@/lib/supabase-server";
-
-// GET /api/profile?id=<uuid>  — fetch a profile by user id
-export async function GET(req: NextRequest) {
-  const userId = new URL(req.url).searchParams.get("id");
-  if (!userId) return NextResponse.json({ error: "id required" }, { status: 400 });
-  if (!isSupabaseConfigured()) return NextResponse.json({ profile: null });
-
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, city, bio, goals, role, created_at")
-      .eq("id", userId)
-      .single();
-    if (error) throw error;
-    return NextResponse.json({ profile: data });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}
-
-// PUT /api/profile  — update own profile (must be signed in)
-export async function PUT(req: NextRequest) {
-  if (!isSupabaseConfigured())
-    return NextResponse.json({ error: SUPABASE_NOT_CONFIGURED }, { status: 401 });
-  try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-
-    const body: Record<string, unknown> = await req.json().catch(() => ({}));
-    // Whitelist updatable fields; never allow id or role to be changed here
-    const { full_name, city, bio, goals } = body as {
-      full_name?: string; city?: string; bio?: string; goals?: string;
-    };
-
-    const patch: Record<string, unknown> = {};
-    if (full_name !== undefined) patch.full_name = String(full_name).trim().slice(0, 200);
-    if (city      !== undefined) patch.city      = String(city).trim().slice(0, 100);
-    if (bio       !== undefined) patch.bio       = String(bio).trim().slice(0, 1000);
-    if (goals     !== undefined) patch.goals     = String(goals).trim().slice(0, 1000);
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .update(patch)
-      .eq("id", user.id)
-      .select("id, full_name, city, bio, goals, role, created_at")
-      .single();
-    if (error) throw error;
-    return NextResponse.json({ profile: data });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}
+import {NextRequest,NextResponse} from "next/server";
+import {createClient} from "@/lib/supabase-server";
+import {query,queryOne,ensureProfile} from "@/lib/db";
+import {z} from "zod";
+type Profile={id:string;full_name:string|null;city:string|null;bio:string|null;goals:string|null;role:string;created_at:string};
+const COLUMNS="id,full_name,city,bio,goals,role,created_at";
+async function currentUser(){const auth=createClient();return (await auth.auth.getUser()).data.user;}
+export async function GET(req:NextRequest){const user=await currentUser();if(!user)return NextResponse.json({error:"Sign in required"},{status:401});const requested=new URL(req.url).searchParams.get("id")??user.id;if(requested!==user.id)return NextResponse.json({error:"Forbidden"},{status:403});try{await ensureProfile(user.id,user.user_metadata?.full_name??null);const profile=await queryOne<Profile>(`SELECT ${COLUMNS} FROM profiles WHERE id=$1`,[user.id]);return NextResponse.json({profile});}catch{return NextResponse.json({error:"Could not load profile"},{status:500});}}
+export async function PUT(req:NextRequest){const user=await currentUser();if(!user)return NextResponse.json({error:"Sign in required"},{status:401});try{await ensureProfile(user.id,user.user_metadata?.full_name??null);}catch{return NextResponse.json({error:"Could not initialize profile"},{status:500});}let body:unknown;try{body=await req.json();}catch{return NextResponse.json({error:"Invalid JSON body"},{status:400});}const parsed=z.object({full_name:z.string().trim().max(200).optional(),city:z.string().trim().max(100).optional(),bio:z.string().trim().max(1000).optional(),goals:z.string().trim().max(1000).optional()}).strict().safeParse(body);if(!parsed.success)return NextResponse.json({error:"Invalid profile payload"},{status:400});const fields=Object.keys(parsed.data) as (keyof typeof parsed.data)[];if(!fields.length)return NextResponse.json({error:"No fields to update"},{status:400});const set=fields.map((key,i)=>`${key}=$${i+2}`).join(",");try{const row=await queryOne<Profile>(`UPDATE profiles SET ${set} WHERE id=$1 RETURNING ${COLUMNS}`,[user.id,...fields.map(key=>parsed.data[key])]);return row?NextResponse.json({profile:row}):NextResponse.json({error:"Profile not found"},{status:404});}catch{return NextResponse.json({error:"Could not update profile"},{status:500});}}
+export async function POST(req:NextRequest){const user=await currentUser();if(!user)return NextResponse.json({error:"Sign in required"},{status:401});let body:unknown;try{body=await req.json();}catch{body={};}const parsed=z.object({full_name:z.string().trim().max(200).optional()}).safeParse(body);try{await ensureProfile(user.id,parsed.success?parsed.data.full_name??user.user_metadata?.full_name??null:user.user_metadata?.full_name??null);return NextResponse.json({ok:true});}catch{return NextResponse.json({error:"Could not initialize profile"},{status:500});}}

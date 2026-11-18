@@ -11,3 +11,4 @@ daily-code-check-*.md
 
 # VS Code / GitHub Copilot AI-rules file (Codacy directives, opt-in only)
 .github/instructions/codacy.instructions.md
+.neon

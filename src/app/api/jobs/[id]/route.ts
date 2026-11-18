@@ -1,5 +1,6 @@
 import { JobController } from "@/controllers/job.controller";
 import { updateJobSchema, uuidParamSchema } from "@/lib/request-validation";
+import { requireRole } from "@/lib/rbac";
 import { NextResponse } from "next/server";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -34,6 +35,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: "Invalid job payload", issues: patch.error.flatten() }, { status: 400 });
   }
 
+  const auth = await requireRole("moderator");
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const r = await JobController.update(parsedId.data, patch.data);
   return r.ok ? NextResponse.json({ job: r.data }) : NextResponse.json({ error: r.error }, { status: r.status });
 }
@@ -43,6 +46,9 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   const parsedId = validateId(id);
   if (!parsedId.success) return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
 
+  const { requireRole } = await import("@/lib/rbac");
+  const auth = await requireRole("moderator");
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const r = await JobController.remove(parsedId.data);
   return r.ok ? NextResponse.json({ deleted: r.data.id }) : NextResponse.json({ error: r.error }, { status: r.status });
 }

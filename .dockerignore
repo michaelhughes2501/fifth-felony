@@ -1,6 +1,9 @@
 node_modules
 .next
 .git
+defunct_apps
+.npm-cache
+*.zip
 .gitignore
 *.log
 .env.local*

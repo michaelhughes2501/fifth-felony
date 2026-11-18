@@ -1,62 +1,36 @@
-import {
-  createClient,
-  createServiceClient,
-  isSupabaseConfigured,
-  SUPABASE_NOT_CONFIGURED,
-} from "@/lib/supabase-server";
+import { query, queryOne, DATABASE_NOT_CONFIGURED, isDatabaseConfigured } from "@/lib/db";
 import type { Job } from "@/types";
 
-// Escape PostgREST special characters to prevent filter injection.
-function sanitizeFilter(value: string): string {
-  return value.replace(/[.,()\\%]/g, "");
-}
-
-// MODEL: owns all data access for the `jobs` table.
-// Read uses the RLS-scoped client; writes use the service client
-// (admin/provider seeding) since public users can't write jobs.
+const EDITABLE_FIELDS = ["title", "company", "location", "description", "fair_chance", "apply_url"] as const;
 
 export const JobModel = {
   async list(q?: string): Promise<Job[]> {
-    if (!isSupabaseConfigured()) return [];
-    const supabase = createClient();
-    let query = supabase.from("jobs").select("*").order("created_at", { ascending: false });
-    if (q) {
-      const safe = sanitizeFilter(q);
-      query = query.or(`title.ilike.%${safe}%,company.ilike.%${safe}%,location.ilike.%${safe}%`);
-    }
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Job[];
+    if (!isDatabaseConfigured()) return [];
+    if (!q) return query<Job>("SELECT * FROM jobs ORDER BY created_at DESC");
+    const search = `%${q}%`;
+    return query<Job>("SELECT * FROM jobs WHERE title ILIKE $1 OR company ILIKE $1 OR location ILIKE $1 ORDER BY created_at DESC", [search]);
   },
-
   async get(id: string): Promise<Job | null> {
-    if (!isSupabaseConfigured()) return null;
-    const supabase = createClient();
-    const { data, error } = await supabase.from("jobs").select("*").eq("id", id).maybeSingle();
-    if (error) throw new Error(error.message);
-    return data as Job | null;
+    if (!isDatabaseConfigured()) return null;
+    return queryOne<Job>("SELECT * FROM jobs WHERE id = $1", [id]);
   },
-
   async create(input: Partial<Job>): Promise<Job> {
-    if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
-    const supabase = createServiceClient();
-    const { data, error } = await supabase.from("jobs").insert(input).select().single();
-    if (error) throw new Error(error.message);
-    return data as Job;
+    if (!isDatabaseConfigured()) throw new Error(DATABASE_NOT_CONFIGURED);
+    const row = await queryOne<Job>("INSERT INTO jobs (title, company, location, description, fair_chance, apply_url) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *", [input.title, input.company, input.location ?? null, input.description ?? null, input.fair_chance ?? true, input.apply_url ?? null]);
+    if (!row) throw new Error("Could not create job.");
+    return row;
   },
-
   async update(id: string, patch: Partial<Job>): Promise<Job> {
-    if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
-    const supabase = createServiceClient();
-    const { data, error } = await supabase.from("jobs").update(patch).eq("id", id).select().single();
-    if (error) throw new Error(error.message);
-    return data as Job;
+    if (!isDatabaseConfigured()) throw new Error(DATABASE_NOT_CONFIGURED);
+    const fields = EDITABLE_FIELDS.filter((key) => patch[key] !== undefined);
+    if (!fields.length) throw new Error("No fields to update.");
+    const assignments = fields.map((key, index) => `${key} = $${index + 2}`).join(", ");
+    const row = await queryOne<Job>(`UPDATE jobs SET ${assignments} WHERE id = $1 RETURNING *`, [id, ...fields.map((key) => patch[key])]);
+    if (!row) throw new Error("Job not found.");
+    return row;
   },
-
   async remove(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) throw new Error(SUPABASE_NOT_CONFIGURED);
-    const supabase = createServiceClient();
-    const { error } = await supabase.from("jobs").delete().eq("id", id);
-    if (error) throw new Error(error.message);
+    if (!isDatabaseConfigured()) throw new Error(DATABASE_NOT_CONFIGURED);
+    await query("DELETE FROM jobs WHERE id = $1", [id]);
   },
 };

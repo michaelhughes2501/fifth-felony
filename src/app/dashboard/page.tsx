@@ -1,4 +1,5 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase-server";
+import { queryOne } from "@/lib/db";
 import { ApplicationController } from "@/controllers/application.controller";
 import { ApplicationTracker } from "@/components/ApplicationTracker";
 import { redirect } from "next/navigation";
@@ -13,11 +14,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, city, goals")
-    .eq("id", user.id)
-    .single();
+  const profile = await queryOne<{ full_name: string | null; city: string | null; goals: string | null }>("SELECT full_name, city, goals FROM profiles WHERE id = $1", [user.id]);
 
   const appCount = await ApplicationController.countMine();
   const summaryResult = await ResidentDashboardController.summary();

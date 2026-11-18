@@ -1,11 +1,13 @@
 import { CommunityModel } from "@/models/community.model";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase-server";
 import type { CommunityPost, Result } from "@/types";
+import { ensureProfile } from "@/lib/db";
 
 async function requireUser() {
   if (!isSupabaseConfigured()) return null;
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (user) { try { await ensureProfile(user.id, user.user_metadata?.full_name ?? null); } catch { /* request operation handles database failure */ } }
   return user;
 }
 
