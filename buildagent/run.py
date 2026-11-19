@@ -15,12 +15,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 from . import config as cfgmod
 from .builder import can_build_node, run_build
-from .core import SEVERITY_ORDER, BuildResult, Finding, Phase, finding_to_report
+from .core import SEVERITY_ORDER, BuildResult, Finding, finding_to_report
 from .detect import discover
 
 
@@ -31,7 +30,6 @@ def _icon(sev: str) -> str:
 
 def _result_to_findings(r: BuildResult) -> list[Finding]:
     findings: list[Finding] = []
-    rel = r.check.config_path
     if not r.success:
         findings.append(Finding(
             severity="high",
