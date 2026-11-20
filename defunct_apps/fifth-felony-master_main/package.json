@@ -17,11 +17,11 @@
     "@tailwindcss/postcss": "^4.3.0",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
-    "next": "^16.2.7",
+    "next": "^16.4.5",
     "openai": "^6.40.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
