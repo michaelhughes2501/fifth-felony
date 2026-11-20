@@ -19,11 +19,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 from . import config as cfgmod
-from .core import SEVERITY_ORDER, DepFinding
+from .core import SEVERITY_ORDER
 from .parsers import parse_manifest
 from .scanner import scan_dependencies
 

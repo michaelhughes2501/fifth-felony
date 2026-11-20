@@ -17,7 +17,6 @@ import sys
 from pathlib import Path
 
 from .bumper import BumpProposal, is_vuln_priority
-from .editor import apply_bump
 
 
 # We import the PR-agent client lazily so the dep agent can be used without it.
@@ -41,7 +40,7 @@ def _pr_body(proposal: BumpProposal) -> str:
     f = proposal.finding
     d = f.dependency
     lines = [
-        f"## Dependency bump proposed by the dependency agent",
+        "## Dependency bump proposed by the dependency agent",
         "",
         f"- **Package:** `{d.name}` ({d.ecosystem})",
         f"- **From:** `{d.current}`  →  **To:** `{proposal.to_version}`",

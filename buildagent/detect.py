@@ -14,7 +14,6 @@ real-build phase can later confirm the outputs were produced.
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 from pathlib import Path
