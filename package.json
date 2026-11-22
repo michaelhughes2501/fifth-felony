@@ -9,7 +9,7 @@
     "start": "next start --port 3002",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run src/lib/request-validation.test.ts && node --test tests/*.test.mjs",
+    "test": "vitest run src/lib/request-validation.test.ts src/lib/reentry-tools.test.ts && node --test tests/*.test.mjs",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate-neon.mjs",
     "db:seed:resources": "node --env-file-if-exists=.env.local scripts/seed-resources-neon.mjs",
     "db:seed": "node --env-file-if-exists=.env.local scripts/seed-knowledge.mjs",
