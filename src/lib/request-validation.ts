@@ -77,3 +77,16 @@ export function getClientIp(headers: Headers): string {
   if (forwarded) return forwarded.split(",")[0].trim();
   return headers.get("x-real-ip")?.trim() || "unknown";
 }
+
+const caseText = (max: number) =>
+  z.string().trim().max(max).transform((v) => v.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim());
+export const legalCaseInputSchema = z.object({
+  case_number: caseText(60).pipe(z.string().min(1)),
+  court: caseText(120).pipe(z.string().min(1)),
+  case_type: z.enum(["criminal", "probation_parole", "expungement", "family", "civil", "other"]).default("criminal"),
+  status: z.enum(["open", "pending_hearing", "on_supervision", "closed", "dismissed"]).default("open"),
+  next_hearing_at: z.string().datetime({ offset: true }).nullable().optional(),
+  attorney: caseText(120).nullable().optional(),
+  notes: z.string().trim().max(2_000).transform((v) => v.replace(/<[^>]*>/g, "").trim()).nullable().optional(),
+}).strict();
+export type LegalCaseInput = z.infer<typeof legalCaseInputSchema>;

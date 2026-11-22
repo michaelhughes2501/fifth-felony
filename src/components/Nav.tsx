@@ -8,6 +8,8 @@ const links = [
   { href: "/housing", label: "Housing" },
   { href: "/mental-health", label: "Mental Health" },
   { href: "/legal", label: "Legal Aid" },
+  { href: "/tools", label: "Tools" },
+  { href: "/cases", label: "My Cases" },
   { href: "/community", label: "Community" },
 ];
 

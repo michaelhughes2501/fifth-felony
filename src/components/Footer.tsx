@@ -17,13 +17,16 @@ export function Footer() {
             <li><Link href="/housing" className="hover:text-clay">Housing</Link></li>
             <li><Link href="/legal" className="hover:text-clay">Legal aid</Link></li>
             <li><Link href="/mental-health" className="hover:text-clay">Mental health</Link></li>
+            <li><Link href="/tools" className="hover:text-clay">Reentry tools</Link></li>
           </ul>
         </div>
         <div className="font-body text-sm">
           <div className="mb-3 font-semibold uppercase tracking-wide text-cream/60">Crisis</div>
           <p className="text-cream/85">
             If you are in immediate danger, call <strong>911</strong>.<br />
-            988 Suicide &amp; Crisis Lifeline: call or text <strong>988</strong>.
+            988 Suicide &amp; Crisis Lifeline: call or text <strong><a href="tel:988" className="hover:text-clay">988</a></strong>.<br />
+            SAMHSA Helpline (substance use &amp; mental health, 24/7): <strong><a href="tel:18006624357" className="hover:text-clay">1-800-662-4357</a></strong>.<br />
+            Local housing, food &amp; utility help: <strong><a href="tel:211" className="hover:text-clay">211</a></strong>.
           </p>
         </div>
       </div>

@@ -115,3 +115,19 @@ export interface Profile {
 export type Result<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; status: number };
+
+export type LegalCaseType = "criminal" | "probation_parole" | "expungement" | "family" | "civil" | "other";
+export type LegalCaseStatus = "open" | "pending_hearing" | "on_supervision" | "closed" | "dismissed";
+export interface LegalCase {
+  id: string;
+  user_id: string;
+  case_number: string;
+  court: string;
+  case_type: LegalCaseType;
+  status: LegalCaseStatus;
+  next_hearing_at: string | null;
+  attorney: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
