@@ -2,56 +2,65 @@
 // directly in Next.js App Router routes. The in-memory checkRateLimit
 // function below is what the Next.js API routes actually use.
 
-/**
- * Rate limit store for in-memory tracking (suitable for single-instance deployment)
- * For production with multiple instances, use Redis
+/** Rate limit store for in-memory tracking (suitable for single-instance deployment)
+ * For production with multiple instances, use Redis.
  */
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
+type RateLimitEntry = {
+  count: number;
+  resetTime: number;
+  maxRequests: number;
+};
 
+const requestCounts = new Map<string, RateLimitEntry>();
 const MAX_ENTRIES = 10_000;
 
-// Periodically evict expired entries to prevent unbounded memory growth.
-function evictExpired() {
-  const now = Date.now();
+function evictExpired(now = Date.now()) {
   for (const [key, entry] of requestCounts) {
-    if (now > entry.resetTime) {
-      requestCounts.delete(key);
-    }
+    if (now >= entry.resetTime) requestCounts.delete(key);
   }
 }
 
 export function checkRateLimit(
   key: string,
-  maxRequests: number = 100,
-  windowMs: number = 15 * 60 * 1000
+  maxRequests = 100,
+  windowMs = 15 * 60 * 1000,
 ): boolean {
+  const safeMax = Math.max(1, Math.floor(maxRequests));
+  const safeWindow = Math.max(1, Math.floor(windowMs));
   const now = Date.now();
   const entry = requestCounts.get(key);
 
-  if (!entry || now > entry.resetTime) {
-    // Evict expired entries if the map is getting large
-    if (requestCounts.size >= MAX_ENTRIES) {
-      evictExpired();
-    }
-    requestCounts.set(key, { count: 1, resetTime: now + windowMs });
+  if (!entry || now >= entry.resetTime) {
+    if (requestCounts.size >= MAX_ENTRIES) evictExpired(now);
+    requestCounts.set(key, {
+      count: 1,
+      resetTime: now + safeWindow,
+      maxRequests: safeMax,
+    });
     return true;
   }
 
-  if (entry.count < maxRequests) {
-    entry.count++;
-    return true;
-  }
+  if (entry.count >= entry.maxRequests) return false;
 
-  return false;
+  entry.count += 1;
+  return true;
 }
 
-export function getRateLimitStatus(key: string): { remaining: number; resetTime: number } {
+export function getRateLimitStatus(
+  key: string,
+  maxRequests = 100,
+  windowMs = 15 * 60 * 1000,
+): { remaining: number; resetTime: number } {
+  const safeMax = Math.max(1, Math.floor(maxRequests));
+  const safeWindow = Math.max(1, Math.floor(windowMs));
   const entry = requestCounts.get(key);
 
   if (!entry) {
-    return { remaining: 100, resetTime: Date.now() + 15 * 60 * 1000 };
+    return { remaining: safeMax, resetTime: Date.now() + safeWindow };
   }
 
-  const remaining = Math.max(0, 100 - entry.count);
-  return { remaining, resetTime: entry.resetTime };
+  return {
+    remaining: Math.max(0, entry.maxRequests - entry.count),
+    resetTime: entry.resetTime,
+  };
 }

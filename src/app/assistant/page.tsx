@@ -27,16 +27,21 @@ export default function AssistantPage() {
   }, [messages, busy]);
 
   async function send(text: string) {
-    if (!text.trim() || busy) return;
-    const next: Msg[] = [...messages, { role: "user", content: text.trim() }];
+    const trimmed = text.trim();
+    if (!trimmed || busy) return;
+
+    const next: Msg[] = [...messages, { role: "user", content: trimmed }];
     setMessages(next);
     setInput("");
     setBusy(true);
     try {
+      // The API accepts only user-authored turns. Keep the local assistant
+      // transcript for UI context, but never send server-authored messages.
+      const requestMessages = next.filter((message) => message.role === "user").slice(-8);
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: requestMessages }),
       });
       const json = await res.json();
       setMessages([...next, { role: "assistant", content: json.reply ?? "Sorry, try again." }]);

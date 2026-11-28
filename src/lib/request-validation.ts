@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 export const chatMessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
+  // The client may only submit user-authored turns. System and assistant
+  // messages are server-controlled and must never be accepted from the caller.
+  role: z.literal("user"),
   content: z.string().trim().min(1).max(10_000),
 }).strict();
 
