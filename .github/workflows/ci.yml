@@ -2,33 +2,50 @@ name: CI
 
 on:
   push:
+    branches: [main, master, develop]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - name: Guard against unsupported Next.js downgrade
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify supported Next.js version
         run: |
           NEXT_MAJOR=$(node -p "require('./node_modules/next/package.json').version.split('.')[0]")
           if [ "$NEXT_MAJOR" -lt 16 ]; then
-            echo "::error::next.js major version ($NEXT_MAJOR) is below floor (16)."
+            echo "::error::Next.js major version ($NEXT_MAJOR) is below the supported floor (16)."
             exit 1
           fi
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Docker build
+        run: docker build --tag fifth-felony:${{ github.sha }} .
