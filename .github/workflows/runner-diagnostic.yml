@@ -1,0 +1,22 @@
+name: Runner Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/runner-diagnostic.yml"
+
+permissions: {}
+
+jobs:
+  runner-smoke-test:
+    name: Runner smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm runner starts
+        run: |
+          echo "GitHub-hosted runner started successfully."
+          uname -a
+          date -u
