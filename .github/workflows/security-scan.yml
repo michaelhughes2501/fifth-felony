@@ -1,70 +1,32 @@
-name: Security & YAML Scan
+name: Security Scan
 
-# Agent 1 wakes up on every push and pull request. This is the "always
-# watching" behavior — event-driven rather than a process you babysit.
 on:
   push:
     branches: [main, master, develop]
   pull_request:
+  workflow_dispatch:
 
-# Least privilege: the scan only needs to read code and write a PR comment.
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  scan:
+  security:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
+          node-version: "22"
+          cache: npm
 
-      - name: Install scanner dependencies
-        run: pip install pyyaml
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run YAML security scan (markdown for PR comment)
-        id: scan
-        run: |
-          python -m scanner.run . --format markdown --fail-on high > scan_report.md \
-            || echo "FAILED=1" >> "$GITHUB_ENV"
-          cat scan_report.md
+      - name: Dependency security audit
+        run: npm audit --audit-level=high
 
-      - name: Emit JSON report for Agent 5
-        if: always()
-        run: |
-          mkdir -p agent-reports
-          python -m scanner.run . --format json --fail-on critical > agent-reports/security-scanner.json || true
-
-      - name: Upload report for PR coordinator
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          # Unique name so it lives alongside the other agents' artifacts.
-          name: agent-reports-security
-          path: agent-reports/
-          if-no-files-found: ignore
-
-      - name: Comment results on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const body = fs.readFileSync('scan_report.md', 'utf8');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body,
-            });
-
-      - name: Fail if issues found
-        if: env.FAILED == '1'
-        run: |
-          echo "::error::Security scan found issues at or above the 'high' threshold."
-          exit 1
+      - name: Typecheck
+        run: npm run typecheck
