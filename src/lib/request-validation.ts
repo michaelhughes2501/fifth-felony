@@ -75,9 +75,13 @@ export type CreateJobRequest = z.infer<typeof createJobSchema>;
 export type UpdateJobRequest = z.infer<typeof updateJobSchema>;
 
 export function getClientIp(headers: Headers): string {
+  // Prefer the platform-provided single-client address when available.
+  // Limit the value so an attacker cannot create arbitrarily large map keys.
+  const realIp = headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp.slice(0, 128);
   const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return headers.get("x-real-ip")?.trim() || "unknown";
+  if (forwarded) return forwarded.split(",")[0]?.trim().slice(0, 128) || "unknown";
+  return "unknown";
 }
 
 const caseText = (max: number) =>

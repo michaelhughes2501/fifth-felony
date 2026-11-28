@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { query, queryOne, ensureProfile } from "@/lib/db";
-import { communityReplySchema, uuidParamSchema } from "@/lib/request-validation";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { communityReplySchema, uuidParamSchema, getClientIp } from "@/lib/request-validation";
 
 type Ctx = { params: Promise<{ id: string }> };
 type Reply = {
@@ -31,6 +32,14 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 }
 
 export async function POST(req: NextRequest, { params }: Ctx) {
+  const ip = getClientIp(req.headers);
+  if (!checkRateLimit(`community-reply:${ip}`, 30, 60 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded." },
+      { status: 429, headers: { "Retry-After": "3600", "Cache-Control": "no-store" } }
+    );
+  }
+
   const auth = createClient();
   const { data: { user } } = await auth.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });

@@ -8,9 +8,7 @@ const auth = authBaseUrl && cookieSecret && cookieSecret.length >= 32
   ? createNeonAuth({ baseUrl: authBaseUrl, cookies: { secret: cookieSecret } })
   : null;
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
-
+function applySecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set("Content-Security-Policy", [
     "default-src 'self'",
     "base-uri 'self'",
@@ -32,8 +30,20 @@ export async function middleware(request: NextRequest) {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  return response;
+}
 
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+
+  // API routes need security headers but must not be passed through the
+  // page-oriented Neon Auth middleware.
+  if (path.startsWith("/api/")) {
+    return applySecurityHeaders(NextResponse.next({ request }));
+  }
+
+  let response = applySecurityHeaders(NextResponse.next({ request }));
+
   if (!auth) {
     return PROTECTED.some((prefix) => path.startsWith(prefix))
       ? NextResponse.redirect(new URL("/login", request.url))
@@ -47,11 +57,9 @@ export async function middleware(request: NextRequest) {
   });
   const authResponse = await authMiddleware(request);
   if (authResponse.status >= 300 && authResponse.status < 400) return authResponse;
-  // Apply security headers after the auth middleware response.
-  for (const [name, value] of response.headers) authResponse.headers.set(name, value);
-  return authResponse;
+  return applySecurityHeaders(authResponse);
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (!checkRateLimit(`chat:${ip}`, 20, 60 * 60 * 1000)) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Maximum 20 requests per hour." },
-        { status: 429 }
+        { status: 429, headers: { "Retry-After": "3600", "Cache-Control": "no-store" } }
       );
     }
 
@@ -51,19 +51,26 @@ export async function POST(req: NextRequest) {
 
     const result = await ChatController.respond(messages, ctx);
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
+      // Never expose provider/database exception details to clients.
+      return NextResponse.json(
+        { error: "The assistant is temporarily unavailable." },
+        { status: result.status, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
     return NextResponse.json({
       ...result.data,
       ...(convoId ? { conversationId: convoId } : {}),
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid request format.", details: error.issues }, { status: 400 });
     }
 
     console.error("Chat API error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
+    );
   }
 }

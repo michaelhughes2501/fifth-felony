@@ -1,10 +1,7 @@
-// NOTE: express-rate-limit is an Express middleware and cannot be used
-// directly in Next.js App Router routes. The in-memory checkRateLimit
-// function below is what the Next.js API routes actually use.
+// Fixed-window rate limiter for Next.js route handlers.
+// This store is process-local; use a shared store (Redis/Upstash/etc.) for
+// multi-instance production deployments.
 
-/** Rate limit store for in-memory tracking (suitable for single-instance deployment)
- * For production with multiple instances, use Redis.
- */
 type RateLimitEntry = {
   count: number;
   resetTime: number;
@@ -20,18 +17,30 @@ function evictExpired(now = Date.now()) {
   }
 }
 
+function normalizeLimit(value: number, fallback: number): number {
+  return Number.isFinite(value) ? Math.max(1, Math.floor(value)) : fallback;
+}
+
 export function checkRateLimit(
   key: string,
   maxRequests = 100,
   windowMs = 15 * 60 * 1000,
 ): boolean {
-  const safeMax = Math.max(1, Math.floor(maxRequests));
-  const safeWindow = Math.max(1, Math.floor(windowMs));
+  const safeMax = normalizeLimit(maxRequests, 100);
+  const safeWindow = normalizeLimit(windowMs, 15 * 60 * 1000);
   const now = Date.now();
   const entry = requestCounts.get(key);
 
   if (!entry || now >= entry.resetTime) {
-    if (requestCounts.size >= MAX_ENTRIES) evictExpired(now);
+    if (requestCounts.size >= MAX_ENTRIES) {
+      evictExpired(now);
+      // If every entry is still active, drop the oldest key rather than
+      // allowing unbounded memory growth under a spoofed-key attack.
+      if (requestCounts.size >= MAX_ENTRIES) {
+        const oldest = requestCounts.keys().next().value;
+        if (typeof oldest === "string") requestCounts.delete(oldest);
+      }
+    }
     requestCounts.set(key, {
       count: 1,
       resetTime: now + safeWindow,
@@ -51,8 +60,8 @@ export function getRateLimitStatus(
   maxRequests = 100,
   windowMs = 15 * 60 * 1000,
 ): { remaining: number; resetTime: number } {
-  const safeMax = Math.max(1, Math.floor(maxRequests));
-  const safeWindow = Math.max(1, Math.floor(windowMs));
+  const safeMax = normalizeLimit(maxRequests, 100);
+  const safeWindow = normalizeLimit(windowMs, 15 * 60 * 1000);
   const entry = requestCounts.get(key);
 
   if (!entry) {

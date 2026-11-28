@@ -15,8 +15,8 @@ export const CommunityController = {
   async list(): Promise<Result<CommunityPost[]>> {
     try {
       return { ok: true, data: await CommunityModel.list() };
-    } catch (e: any) {
-      return { ok: false, error: e.message, status: 500 };
+    } catch {
+      return { ok: false, error: "Could not load community posts.", status: 500 };
     }
   },
 
@@ -28,8 +28,8 @@ export const CommunityController = {
     try {
       const post = await CommunityModel.create(user.id, title.trim(), body.trim());
       return { ok: true, data: post };
-    } catch (e: any) {
-      return { ok: false, error: e.message, status: 500 };
+    } catch {
+      return { ok: false, error: "Could not create community post.", status: 500 };
     }
   },
 
@@ -38,8 +38,8 @@ export const CommunityController = {
     if (!user) return { ok: false, error: "Sign in required", status: 401 };
     try {
       return { ok: true, data: await CommunityModel.update(id, patch, user.id) };
-    } catch (e: any) {
-      return { ok: false, error: e.message, status: 500 };
+    } catch {
+      return { ok: false, error: "Could not update community post.", status: 500 };
     }
   },
 
@@ -49,8 +49,8 @@ export const CommunityController = {
     try {
       await CommunityModel.remove(id, user.id);
       return { ok: true, data: { id } };
-    } catch (e: any) {
-      return { ok: false, error: e.message, status: 500 };
+    } catch {
+      return { ok: false, error: "Could not delete community post.", status: 500 };
     }
   },
 };
